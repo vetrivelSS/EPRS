@@ -9,4 +9,7 @@ import org.springframework.stereotype.Repository;
 public interface UserRepository extends JpaRepository<User, Long> {
     // Email illana Phone vachi user ah find pannum
     Optional<User> findByEmailOrPhone(String email, String phone);
+    Optional<User> findByEmail(String email);
+
+    // Neenga munnadiye ezhuthuna method
 }

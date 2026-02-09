@@ -1,5 +1,7 @@
 package com.logincontroller;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -19,7 +21,21 @@ public class User {
     private String phone;
     private String email;
     private String password;
-    private String role; // ROLE_USER, ROLE_ADMIN
+    private String role;
+    private String otp;
+    private LocalDateTime otpExpiry;// ROLE_USER, ROLE_ADMIN
+	public String getOtp() {
+		return otp;
+	}
+	public void setOtp(String otp) {
+		this.otp = otp;
+	}
+	public LocalDateTime getOtpExpiry() {
+		return otpExpiry;
+	}
+	public void setOtpExpiry(LocalDateTime otpExpiry) {
+		this.otpExpiry = otpExpiry;
+	}
 	public Long getId() {
 		return id;
 	}
