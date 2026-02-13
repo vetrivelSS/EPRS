@@ -25,14 +25,19 @@ public class JobOrder {
     private String quantityKg;
     private String location;
     private String priority;
-    
+
+    private String status; 
+
     @ElementCollection
     @CollectionTable(name = "job_order_operators", joinColumns = @JoinColumn(name = "job_id"))
     @Column(name = "operator_name")
-    private List<String> assignedOperators; // Handled as an Array
+    private List<String> assignedOperators;
 
     private String jobCreatedDate;
 
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    
 	public Long getId() {
 		return id;
 	}

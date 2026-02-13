@@ -8,46 +8,20 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/joborders")
-@CrossOrigin("*")
+@CrossOrigin("*") 
 public class JobOrderController {
 
     @Autowired
     private JobOrderRepository repository;
 
-    // --- CREATE ---
+    // --- 1. CREATE (Automatically sets status to PENDING) ---
     @PostMapping("/create")
-    public ResponseEntity<BaseResponse<?>> createJobOrder(
-            @RequestParam("workOrderNumber") String workOrderNumber,
-            @RequestParam("customerName") String customerName,
-            @RequestParam("hsnCode") String hsnCode,
-            @RequestParam("material") String material,
-            @RequestParam("thickness") String thickness,
-            @RequestParam("process") String process,
-            @RequestParam("quantityNo") String quantityNo,
-            @RequestParam("quantityKg") String quantityKg,
-            @RequestParam("location") String location,
-            @RequestParam("priority") String priority,
-            @RequestParam("assignedOperators") List<String> assignedOperators,
-            @RequestParam("jobCreatedDate") String jobCreatedDate) {
-
+    public ResponseEntity<BaseResponse<?>> createJobOrder(@RequestBody JobOrder job) {
         try {
-            JobOrder job = new JobOrder();
-            // ... (your existing mapping logic) ...
-            job.setWorkOrderNumber(workOrderNumber);
-            job.setCustomerName(customerName);
-            job.setHsnCode(hsnCode);
-            job.setMaterial(material);
-            job.setThickness(thickness);
-            job.setProcess(process);
-            job.setQuantityNo(quantityNo);
-            job.setQuantityKg(quantityKg);
-            job.setLocation(location);
-            job.setPriority(priority);
-            job.setAssignedOperators(assignedOperators);
-            job.setJobCreatedDate(jobCreatedDate);
-
             long count = repository.count() + 1;
             job.setJobOrderNumber(String.format("JOB-%04d", count));
+
+            job.setStatus("PENDING");
 
             JobOrder saved = repository.save(job);
             return ResponseEntity.ok(new BaseResponse<>(200, "Job Order Created Successfully", saved));
@@ -56,51 +30,32 @@ public class JobOrderController {
         }
     }
 
-    // --- GET ALL (For Job History List) ---
-    @GetMapping("/list")
-    public ResponseEntity<BaseResponse<List<JobOrder>>> getAllJobs() {
-        List<JobOrder> jobs = repository.findAll();
-        return ResponseEntity.ok(new BaseResponse<>(200, "Data fetched successfully", jobs));
+    // --- 2. GET PENDING (For Production Dashboard) ---
+    @GetMapping("/production/pending")
+    public ResponseEntity<BaseResponse<List<JobOrder>>> getPendingJobs() {
+        List<JobOrder> pendingJobs = repository.findByStatus("PENDING");
+        return ResponseEntity.ok(new BaseResponse<>(200, "Pending jobs fetched successfully", pendingJobs));
     }
 
-    // --- GET BY ID (For opening the Edit Screen) ---
-    @GetMapping("/{id}")
-    public ResponseEntity<BaseResponse<JobOrder>> getJobById(@PathVariable Long id) {
-        return repository.findById(id)
-                .map(job -> ResponseEntity.ok(new BaseResponse<>(200, "Job found", job)))
-                .orElse(ResponseEntity.status(404).body(new BaseResponse<>(404, "Job not found", null)));
-    }
-
-    // --- UPDATE (For the "Edit Job Order" screen) ---
+    // --- 3. UPDATE (Edit Screen - Keeps status as PENDING) ---
     @PutMapping("/update/{id}")
-    public ResponseEntity<BaseResponse<?>> updateJobOrder(
-            @PathVariable Long id,
-            @RequestParam("customerName") String customerName,
-            @RequestParam("hsnCode") String hsnCode,
-            @RequestParam("material") String material,
-            @RequestParam("thickness") String thickness,
-            @RequestParam("process") String process,
-            @RequestParam("quantityNo") String quantityNo,
-            @RequestParam("quantityKg") String quantityKg,
-            @RequestParam("location") String location,
-            @RequestParam("priority") String priority,
-            @RequestParam("assignedOperators") List<String> assignedOperators) {
-
+    public ResponseEntity<BaseResponse<?>> updateJobOrder(@PathVariable Long id, @RequestBody JobOrder jobDetails) {
         try {
             Optional<JobOrder> existingJob = repository.findById(id);
+            
             if (existingJob.isPresent()) {
                 JobOrder job = existingJob.get();
-                // Update fields
-                job.setCustomerName(customerName);
-                job.setHsnCode(hsnCode);
-                job.setMaterial(material);
-                job.setThickness(thickness);
-                job.setProcess(process);
-                job.setQuantityNo(quantityNo);
-                job.setQuantityKg(quantityKg);
-                job.setLocation(location);
-                job.setPriority(priority);
-                job.setAssignedOperators(assignedOperators);
+                
+                job.setCustomerName(jobDetails.getCustomerName());
+                job.setHsnCode(jobDetails.getHsnCode());
+                job.setMaterial(jobDetails.getMaterial());
+                job.setThickness(jobDetails.getThickness());
+                job.setProcess(jobDetails.getProcess());
+                job.setQuantityNo(jobDetails.getQuantityNo());
+                job.setQuantityKg(jobDetails.getQuantityKg());
+                job.setLocation(jobDetails.getLocation());
+                job.setPriority(jobDetails.getPriority());
+                job.setAssignedOperators(jobDetails.getAssignedOperators());
 
                 JobOrder updated = repository.save(job);
                 return ResponseEntity.ok(new BaseResponse<>(200, "Job Order Updated Successfully", updated));
@@ -110,5 +65,12 @@ public class JobOrderController {
         } catch (Exception e) {
             return ResponseEntity.status(400).body(new BaseResponse<>(400, "Update failed: " + e.getMessage(), null));
         }
+    }
+
+    // --- 4. GET ALL (For History) ---
+    @GetMapping("/list")
+    public ResponseEntity<BaseResponse<List<JobOrder>>> getAllJobs() {
+        List<JobOrder> jobs = repository.findAll();
+        return ResponseEntity.ok(new BaseResponse<>(200, "Data fetched successfully", jobs));
     }
 }

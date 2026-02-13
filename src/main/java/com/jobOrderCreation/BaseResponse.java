@@ -8,7 +8,6 @@ public class BaseResponse<T> {
     private String message;
     private T data;
 
-    // Manually add this constructor if Lombok is acting up in STS
     public BaseResponse(int status, String message, T data) {
         this.status = status;
         this.message = message;
