@@ -16,7 +16,7 @@ public class BusinessPartner {
     private String gstin;
     private String paymentTerms;
     private String contactPerson;
-    
+//    changes
     public Long getId() {
 		return id;
 	}
