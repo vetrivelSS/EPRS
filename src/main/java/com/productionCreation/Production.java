@@ -12,8 +12,8 @@ package com.productionCreation;
 	    @GeneratedValue(strategy = GenerationType.IDENTITY)
 	    private Long id;
 
-	    private String jobOrderNumber;      // Linked to JOB-XXXX-2026
-	    private String productionNumber;    // Generated: PRO-XXXX-2026
+	    private String jobOrderNumber;      
+	    private String productionNumber;    
 	    private String customerName;
 	    private String material;
 	    private String thickness;
@@ -24,7 +24,7 @@ package com.productionCreation;
 	    private String scrapQuantity;
 	    private String scrapType;
 	    private String productionDate;
-	    private String status;              // PENDING, IN PROGRESS, COMPLETED
+	    private String status;            
 	    private String remarks;
 		public Long getId() {
 			return id;

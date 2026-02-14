@@ -66,7 +66,6 @@ public class ProductionController {
         }
     }
 
-    // Helper method to keep code clean
     private boolean isAnyFieldEmpty(Production p) {
         return p.getFinishedQuantity() == null || p.getFinishedQuantity().isEmpty() ||
                p.getScrapQuantity() == null || p.getScrapQuantity().isEmpty() ||

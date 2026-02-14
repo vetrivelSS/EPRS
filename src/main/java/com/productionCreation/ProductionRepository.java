@@ -8,17 +8,9 @@ import java.util.List;
 
 @Repository
 public interface ProductionRepository extends JpaRepository<Production, Long> {
-//
-//    // JPQL JOIN: Links Production (p) to JobOrder (j) using the jobOrderNumber field
-//    @Query("SELECT p FROM Production p JOIN JobOrder j ON p.jobOrderNumber = j.jobOrderNumber WHERE p.status = :status")
-//    List<Production> findProductionWithJoins(@Param("status") String status);
-//
-//    // Native SQL alternative if JPQL has issues with field names
-//    @Query(value = "SELECT p.* FROM production p INNER JOIN job_orders j ON p.job_order_number = j.job_order_number WHERE p.status = :status", nativeQuery = true)
-//    List<Production> findByStatusWithNativeJoin(@Param("status") String status);
+
 	 List<Production> findByStatus(String status);
 
-	    // This is the join query you had before, renamed to match your controller call
 	    @Query("SELECT p FROM Production p WHERE p.status = :status")
 	    List<Production> findProductionByStatus(@Param("status") String status);
 
