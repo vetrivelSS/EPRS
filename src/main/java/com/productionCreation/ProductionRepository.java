@@ -10,7 +10,7 @@ import java.util.List;
 public interface ProductionRepository extends JpaRepository<Production, Long> {
 
 	 List<Production> findByStatus(String status);
-
+	    Production findByJobOrderNumber(String jobOrderNumber);
 	    @Query("SELECT p FROM Production p WHERE p.status = :status")
 	    List<Production> findProductionByStatus(@Param("status") String status);
 
