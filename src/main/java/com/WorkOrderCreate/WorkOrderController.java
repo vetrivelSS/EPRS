@@ -7,6 +7,9 @@ import java.nio.file.Paths;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +21,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import com.logincontroller.BaseResponse;
 
 import io.jsonwebtoken.io.IOException;
@@ -43,40 +50,90 @@ public class WorkOrderController {
             ObjectMapper objectMapper = new ObjectMapper();
             WorkOrder workOrder = objectMapper.readValue(jsonData, WorkOrder.class);
 
-            // Path-ah check panni create panna correct-ana logic
-            File storageDir = new File("/data/storage");
-            if (!storageDir.exists()) {
-                boolean created = storageDir.mkdirs(); // Root folder create panna try pannum
-                if(!created) {
-                    // Root-la mudila na project folder-kulle 'storage' nu oru folder create pannum
-                    storageDir = new File("storage");
-                    storageDir.mkdirs();
+            // 1. Ungaloda Root Path
+            String rootPath = "/data/ERP_Documents/"; 
+            
+            // 2. Partner Name (Customer Name) vechu folder name create panrom
+            // Space iruntha athai underscore (_) ah mathidum
+            String partnerFolderName = workOrder.getCustomer().trim().replaceAll("\\s+", "_");
+            
+            // 3. Full Path build panrom: /data/ERP_Documents/Partner_Name/
+            File partnerDir = new File(rootPath + partnerFolderName);
+            
+            // 4. Partner name-la folder illai na, puthusa create pannum
+            if (!partnerDir.exists()) {
+                boolean isCreated = partnerDir.mkdirs(); // mkdirs() intermediate folders-aiyum create pannum
+                if (!isCreated) {
+                    return ResponseEntity.status(500).body(new BaseResponse(500, "Permission Denied: Folder create panna mudiyalai at " + rootPath, null));
                 }
             }
             
-            String finalPath = storageDir.getAbsolutePath() + File.separator;
+            String uploadFolderPath = partnerDir.getAbsolutePath() + File.separator;
 
-            // 1. Save CAD Drawing
+            // 5. CAD Drawing File Save
             if (cadFile != null && !cadFile.isEmpty()) {
-                String cadFileName = System.currentTimeMillis() + "_" + cadFile.getOriginalFilename().replaceAll("\\s+", "_");
-                Path path = Paths.get(finalPath + cadFileName);
+                String cadFileName = "CAD_" + System.currentTimeMillis() + "_" + cadFile.getOriginalFilename().replaceAll("\\s+", "_");
+                Path path = Paths.get(uploadFolderPath + cadFileName);
                 Files.write(path, cadFile.getBytes());
-                workOrder.setCadDrawingPath(path.toString());
+                workOrder.setCadDrawingPath(path.toString()); // DB-la full path save aagum
             }
 
-            // 2. Save BOM Excel
+            // 6. BOM Excel File Save
             if (bomFile != null && !bomFile.isEmpty()) {
-                String bomFileName = System.currentTimeMillis() + "_" + bomFile.getOriginalFilename().replaceAll("\\s+", "_");
-                Path path = Paths.get(finalPath + bomFileName);
+                String bomFileName = "BOM_" + System.currentTimeMillis() + "_" + bomFile.getOriginalFilename().replaceAll("\\s+", "_");
+                Path path = Paths.get(uploadFolderPath + bomFileName);
                 Files.write(path, bomFile.getBytes());
                 workOrder.setBomExcelPath(path.toString());
             }
 
+            // 7. Database-la save pannuvom (WON automatic-ah generate aagum)
             WorkOrder saved = repository.save(workOrder);
+            
             return ResponseEntity.ok(new BaseResponse(200, "Work Order Created: " + saved.getWorkOrderNumber(), List.of(saved)));
 
         } catch (IOException e) {
-            return ResponseEntity.status(500).body(new BaseResponse(500, "Error: " + e.getMessage(), null));
+            return ResponseEntity.status(500).body(new BaseResponse(500, "Storage Error: " + e.getMessage(), null));
+        }
+    }
+    @GetMapping("/download/{id}/{type}")
+    public ResponseEntity<Resource> downloadFile(@PathVariable Long id, @PathVariable String type) throws java.io.IOException {
+        try {
+            // 1. Fetch Work Order from DB
+            WorkOrder workOrder = repository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Work Order not found"));
+
+            // 2. Decide which path to use based on type (cad or bom)
+            String filePath = type.equalsIgnoreCase("cad") ? 
+                              workOrder.getCadDrawingPath() : 
+                              workOrder.getBomExcelPath();
+
+            if (filePath == null || filePath.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // 3. Load file as Resource
+            File file = new File(filePath);
+            if (!file.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Path path = Paths.get(file.getAbsolutePath());
+            ByteArrayResource resource = new ByteArrayResource(Files.readAllBytes(path));
+
+            // 4. Content Type detect pannuvom (PDF, Image, Excel, etc.)
+            String contentType = Files.probeContentType(path);
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
+                    .contentLength(file.length())
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .body(resource);
+
+        } catch (IOException e) {
+            return ResponseEntity.status(500).build();
         }
     }
     @PutMapping(value = "/update/{id}", consumes = {"multipart/form-data"})
@@ -147,5 +204,12 @@ public class WorkOrderController {
     public ResponseEntity<?> getAllWorkOrders() {
         List<WorkOrder> orders = repository.findAll();
         return ResponseEntity.ok(new BaseResponse(200, "Success", orders));
+    }
+    @GetMapping("/search/{won}")
+    public ResponseEntity<?> getWorkOrderByWON(@PathVariable String won) {
+        // Repository-la WON vechu find panrom
+        return repository.findByWorkOrderNumber(won)
+                .map(order -> ResponseEntity.ok(new BaseResponse(200, "Found", List.of(order))))
+                .orElse(ResponseEntity.status(404).body(new BaseResponse(404, "Work Order Not Found", null)));
     }
 }
