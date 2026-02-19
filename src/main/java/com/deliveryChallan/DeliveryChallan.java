@@ -19,7 +19,7 @@ import jakarta.persistence.GenerationType;
 	    private String customerName;
 	    private String material;
 	    private String quantityKg;
-
+	    private String productionNumber;
 	    private String vehicleNumber;
 	    private String hsnCode;
 	    private String transport;
@@ -55,6 +55,16 @@ import jakarta.persistence.GenerationType;
 			return quantityKg;
 		}
 		public void setQuantity(String quantityKg) {
+			this.quantityKg = quantityKg;
+		}
+		
+		public String getProductionNumber() {
+			return productionNumber;
+		}
+		public void setProductionNumber(String productionNumber) {
+			this.productionNumber = productionNumber;
+		}
+		public void setQuantityKg(String quantityKg) {
 			this.quantityKg = quantityKg;
 		}
 		public String getVehicleNumber() {
@@ -98,6 +108,10 @@ import jakarta.persistence.GenerationType;
 		}
 		public void setCreatedDate(String createdDate) {
 			this.createdDate = createdDate;
+		}
+		public String getUnits() {
+			// TODO Auto-generated method stub
+			return null;
 		}
 	    
 	    

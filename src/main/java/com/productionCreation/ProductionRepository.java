@@ -11,6 +11,8 @@ public interface ProductionRepository extends JpaRepository<Production, Long> {
 
 	 List<Production> findByStatus(String status);
 	    Production findByJobOrderNumber(String jobOrderNumber);
+	    Production findByProductionNumber(String productionNumber);
+
 	    @Query("SELECT p FROM Production p WHERE p.status = :status")
 	    List<Production> findProductionByStatus(@Param("status") String status);
 

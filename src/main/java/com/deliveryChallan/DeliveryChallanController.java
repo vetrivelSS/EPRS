@@ -4,6 +4,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.jobOrderCreation.BaseResponse;
 import com.jobOrderCreation.JobOrder;
 import com.jobOrderCreation.JobOrderRepository;
+import com.productionCreation.Production;
+import com.productionCreation.ProductionRepository;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,19 +31,32 @@ import org.springframework.http.ResponseEntity;
 
 	    @Autowired private DeliveryChallanRepository dcRepo;
 	    @Autowired private JobOrderRepository jobRepo;
+	    @Autowired private ProductionRepository proRepo;
+	    @Autowired private PdfGeneratorService pdfService;
 
-	    // 1. GET DATA BY JOB NUMBER (To auto-fill Customer, Material, Quantity)
-	    @GetMapping("/fetch-job-details/{jobNumber}")
-	    public ResponseEntity<?> getJobDetails(@PathVariable String jobNumber) {
+	 // 1. GET DATA (Material & Customer from Production, Quantity from Job Order)
+	    @GetMapping("/fetch-details-by-production/{productionNumber}")
+	    public ResponseEntity<?> getDetailsByProduction(@PathVariable String productionNumber) {
+	        // Explicitly use the Production type instead of 'var' to avoid "Object" errors
+	        Production production = proRepo.findByProductionNumber(productionNumber);
+	        
+	        if (production == null) {
+	            return ResponseEntity.status(404).body("Production record not found");
+	        }
+
+	        // Fetch Job Order using the Job Number linked inside the Production record
+	        String jobNumber = production.getJobOrderNumber(); 
 	        JobOrder job = jobRepo.findByJobOrderNumber(jobNumber);
+
 	        if (job == null) {
-	            return ResponseEntity.status(404).body("Job Order not found");
+	            return ResponseEntity.status(404).body("Job Order linked to this production not found");
 	        }
 	        
 	        Map<String, String> response = new HashMap<>();
-	        response.put("customerName", job.getCustomerName());
-	        response.put("material", job.getMaterial());
-	        response.put("quantity", job.getQuantityKg()); 
+	        // As requested: Customer and Material from Production, Quantity from Job Order
+	        response.put("customerName", production.getCustomerName()); 
+	        response.put("material", production.getMaterial());         
+	        response.put("quantity", job.getQuantityKg());              
 	        
 	        return ResponseEntity.ok(response);
 	    }
@@ -84,6 +99,17 @@ import org.springframework.http.ResponseEntity;
 	        DeliveryChallan saved = dcRepo.save(existing);
 
 	        return ResponseEntity.ok(saved);
+	    }
+
+	    @GetMapping("/download-pdf/{id}")
+	    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id) {
+	        DeliveryChallan dc = dcRepo.findById(id).orElseThrow();
+	        byte[] pdfContent = pdfService.generateChallanPdf(dc);
+
+	        return ResponseEntity.ok()
+	                .header("Content-Disposition", "attachment; filename=Challan_" + id + ".pdf")
+	                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+	                .body(pdfContent);
 	    }
 
 	}
