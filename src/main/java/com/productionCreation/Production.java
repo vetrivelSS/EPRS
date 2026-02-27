@@ -27,7 +27,41 @@ package com.productionCreation;
 	    private String productionDate;
 	    private String status;     
 	    private String completedDate;
-	    
+	    private String hsnCode;
+	    public String getHsnCode() {
+			return hsnCode;
+		}
+		public void setHsnCode(String hsnCode) {
+			this.hsnCode = hsnCode;
+		}
+		public Double getRate() {
+			return rate;
+		}
+		public void setRate(Double rate) {
+			this.rate = rate;
+		}
+		public Double getTotalAmount() {
+			return totalAmount;
+		}
+		public void setTotalAmount(Double totalAmount) {
+			this.totalAmount = totalAmount;
+		}
+		public String getTransport() {
+			return transport;
+		}
+		public void setTransport(String transport) {
+			this.transport = transport;
+		}
+		public String getVehicleNumber() {
+			return vehicleNumber;
+		}
+		public void setVehicleNumber(String vehicleNumber) {
+			this.vehicleNumber = vehicleNumber;
+		}
+		private Double rate;
+	    private Double totalAmount;
+	    private String transport;
+	    private String vehicleNumber;
 	  
 		public String getCompletedDate() {
 			return completedDate;

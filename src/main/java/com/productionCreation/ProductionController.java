@@ -1,121 +1,126 @@
 package com.productionCreation;
 
-import com.jobOrderCreation.*;
+import com.jobOrderCreation.BaseResponse;
+import com.jobOrderCreation.JobOrder;
+import com.jobOrderCreation.JobOrderRepository;
+import com.productionCreation.Production;
+import com.productionCreation.ProductionRepository;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/production")
-@CrossOrigin("*")
+@RequestMapping(value={"/api/production"})
+@CrossOrigin(value={"*"})
 public class ProductionController {
-
+    
     @Autowired
     private ProductionRepository productionRepo;
-
+    
     @Autowired
     private JobOrderRepository jobOrderRepo;
 
-    // STEP 1: Show data in the "Pending" Tab
-    @GetMapping("/pending-from-joborders")
-    public ResponseEntity<BaseResponse<List<JobOrder>>> getPendingJobs() {
-        List<JobOrder> pending = jobOrderRepo.findByStatus("PENDING");
-        return ResponseEntity.ok(new BaseResponse<>(200, "Pending Jobs Fetched", pending));
+    @GetMapping(value={"/pending-from-joborders"})
+    public ResponseEntity<Object> getPendingJobs() {
+        List<JobOrder> pending = this.jobOrderRepo.findByStatus("PENDING");
+        return ResponseEntity.ok(new BaseResponse(200, "Pending Jobs Fetched", pending));
     }
 
-    // STEP 2: Move from Pending to In-Progress
-    // Call this when user clicks the "Edit/Update" icon on a Pending card
-    @PostMapping("/start-inprogress/{jobNumber}")
-    public ResponseEntity<BaseResponse<?>> startProgress(@PathVariable String jobNumber) {
-        
-        // 1. Job Order-a fetch panrom (Details copy panna idhu dhaan mukkiyam)
-        JobOrder job = jobOrderRepo.findByJobOrderNumber(jobNumber);
-        
-        if (job == null) {
-            return ResponseEntity.status(404).body(new BaseResponse<>(404, "Job Order Not Found", null));
+    @GetMapping(value={"/all-joborders"})
+    public ResponseEntity<Object> getAllJobs() {
+        List<JobOrder> allJobs = this.jobOrderRepo.findAll();
+        return ResponseEntity.ok(new BaseResponse(200, "All Job Orders Fetched Successfully", allJobs));
+    }
+
+    @GetMapping(value={"/all-productions"})
+    public ResponseEntity<Object> getAllProductions() {
+        try {
+            List<Production> productionList = this.productionRepo.findAll();
+            if (productionList.isEmpty()) {
+                return ResponseEntity.ok(new BaseResponse(200, "No production records found", productionList));
+            }
+            return ResponseEntity.ok(new BaseResponse(200, "Production data fetched successfully", productionList));
         }
+        catch (Exception e) {
+            return ResponseEntity.status(500).body(new BaseResponse(500, "Error: " + e.getMessage(), null));
+        }
+    }
 
-        // 2. Job Order status-a update panrom
+    @PostMapping(value={"/start-inprogress/{jobNumber}"})
+    public ResponseEntity<Object> startProgress(@PathVariable String jobNumber) {
+        JobOrder job = this.jobOrderRepo.findByJobOrderNumber(jobNumber);
+        if (job == null) {
+            return ResponseEntity.status(404).body(new BaseResponse(404, "Job Order Not Found", null));
+        }
+        
+        // Update Job Order Status
         job.setStatus("IN PROGRESS");
-        jobOrderRepo.save(job);
+        this.jobOrderRepo.save(job); // Removed (Object) cast
 
-        // 3. Production table-la pudhu entry create panrom
-        // Ingat dhaan neenga munnadi pannadha thiruthura maari values-a set panrom
+        // Create New Production Entry
         Production newProduction = new Production();
         newProduction.setJobOrderNumber(job.getJobOrderNumber());
-        newProduction.setCustomerName(job.getCustomerName()); // Copying from JobOrder
-        newProduction.setMaterial(job.getMaterial());         // Copying from JobOrder
-        newProduction.setThickness(job.getThickness());       // Copying from JobOrder
+        newProduction.setCustomerName(job.getCustomerName());
+        newProduction.setMaterial(job.getMaterial());
+        newProduction.setThickness(job.getThickness());
         newProduction.setStatus("IN PROGRESS");
         
-        // Initial save (ID generate aaga)
-        newProduction = productionRepo.save(newProduction);
-
-        // 4. Production Number generate panni update panrom
+        // Save and get the ID to generate Production Number
+        newProduction = this.productionRepo.save(newProduction); // Removed (Object) cast
+        
         String generatedNo = "PRD-" + newProduction.getId();
         newProduction.setProductionNumber(generatedNo);
         
-        productionRepo.save(newProduction);
-
-        return ResponseEntity.ok(new BaseResponse<>(
-            200, 
-            "Production Started: " + generatedNo, 
-            newProduction
-        ));
+        // Update with generated ID
+        this.productionRepo.save(newProduction); // Removed (Object) cast
+        
+        return ResponseEntity.ok(new BaseResponse(200, "Production Started: " + generatedNo, newProduction));
     }
-    @PostMapping("/submit-production-completed")
-    public ResponseEntity<BaseResponse<?>> submitProduction(@RequestBody Production req) {
+
+    @PostMapping(value={"/submit-production-completed"})
+    public ResponseEntity<Object> submitProduction(@RequestBody Production req) {
         try {
-            // 1. Fetch Existing Record
-            // Database-la irukura andha specific "In-Progress" record-a first edukkanum
-            Production existingRecord = productionRepo.findByJobOrderNumber(req.getJobOrderNumber());
-
+            Production existingRecord = this.productionRepo.findByJobOrderNumber(req.getJobOrderNumber());
             if (existingRecord == null) {
-                return ResponseEntity.status(404).body(new BaseResponse<>(404, "Error: Production record not found!", null));
+                return ResponseEntity.status(404).body(new BaseResponse(404, "Error: Production record not found!", null));
             }
-
-            // 2. Status Validation (Only Completed is allowed here)
             if (!"COMPLETED".equalsIgnoreCase(req.getStatus())) {
-                return ResponseEntity.status(400).body(new BaseResponse<>(400, "Error: Status must be 'COMPLETED' to move to history.", null));
+                return ResponseEntity.status(400).body(new BaseResponse(400, "Error: Status must be 'COMPLETED' to move to history.", null));
             }
-
-            // 3. Manual Validation for Mandatory Fields
-            // User form-la enter panna values-a check panrom
             if (req.getFinishedQuantity() == null || req.getScrapQuantity() == null || req.getScrapType() == null) {
-                return ResponseEntity.status(400).body(new BaseResponse<>(400, "Error: Please fill all fields (Finished Qty, Scrap Qty, Type) before completing.", null));
+                return ResponseEntity.status(400).body(new BaseResponse(400, "Error: Please fill all fields before completing.", null));
             }
-
-            // 4. Update Existing Record with User Input
+            
             existingRecord.setFinishedQuantity(req.getFinishedQuantity());
             existingRecord.setBalanceQuantity(req.getBalanceQuantity());
             existingRecord.setScrapQuantity(req.getScrapQuantity());
             existingRecord.setScrapType(req.getScrapType());
-            existingRecord.setCompletedDate(req.getCompletedDate()); // Date from screen
+            existingRecord.setCompletedDate(req.getCompletedDate());
+            existingRecord.setProductionDate(req.getProductionDate());
             existingRecord.setRemarks(req.getRemarks());
             existingRecord.setStatus("COMPLETED");
-
-            // 5. Save Updated Record & Update JobOrder Status
-            Production saved = productionRepo.save(existingRecord);
-            jobOrderRepo.updateStatusByJobNumber(req.getJobOrderNumber(), "COMPLETED");
-
-            return ResponseEntity.ok(new BaseResponse<>(200, "Production marked as COMPLETED successfully", saved));
-
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(new BaseResponse<>(500, "System Error: " + e.getMessage(), null));
+            
+            Production saved = this.productionRepo.save(existingRecord); // Removed (Object) cast
+            
+            this.jobOrderRepo.updateStatusByJobNumber(req.getJobOrderNumber(), "COMPLETED");
+            
+            return ResponseEntity.ok(new BaseResponse(200, "Production marked as COMPLETED successfully", saved));
+        }
+        catch (Exception e) {
+            return ResponseEntity.status(500).body(new BaseResponse(500, "System Error: " + e.getMessage(), null));
         }
     }
 
-    private boolean isAnyFieldEmpty(Production p) {
-        return p.getFinishedQuantity() == null || p.getFinishedQuantity().isEmpty() ||
-               p.getScrapQuantity() == null || p.getScrapQuantity().isEmpty() ||
-               p.getProductionDate() == null || p.getProductionDate().isEmpty() ||
-               p.getScrapType() == null || p.getScrapType().equals("Select");
-    }
-    // STEP 4: Fetch data for "In Progress" or "Completed" Tabs
-    @GetMapping("/list-all-status/{status}")
-    public ResponseEntity<BaseResponse<List<Production>>> getListByStatus(@PathVariable String status) {
-        List<Production> list = productionRepo.findProductionByStatus(status.toUpperCase());
-        return ResponseEntity.ok(new BaseResponse<>(200, "Data fetched", list));
+    @GetMapping(value={"/list-all-status/{status}"})
+    public ResponseEntity<Object> getListByStatus(@PathVariable String status) {
+        List<Production> list = this.productionRepo.findProductionByStatus(status.toUpperCase());
+        return ResponseEntity.ok(new BaseResponse(200, "Data fetched", list));
     }
 }

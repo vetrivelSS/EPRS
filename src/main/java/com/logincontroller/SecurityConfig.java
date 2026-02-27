@@ -34,7 +34,7 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults()) // CORS enable pannanum
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JWT is stateless
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**","/api/business-partner/**","/api/work-order/**","/api/joborders/**","/api/production/**").permitAll() // Login & Register-ku permission kudukkurom
+                .requestMatchers("/api/auth/**","/api/business-partner/**","/api/work-order/**","/api/joborders/**","/api/production/**","/api/dc/**","/api/invoice/**").permitAll() // Login & Register-ku permission kudukkurom
                 .anyRequest().authenticated() // Matha ella API-kum login panni irukanum
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class) // JWT Filter-ah add panrom

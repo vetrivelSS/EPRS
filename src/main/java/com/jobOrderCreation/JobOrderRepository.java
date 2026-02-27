@@ -19,7 +19,7 @@ import jakarta.transaction.Transactional;
 		    @Query(value = "UPDATE job_orders SET status = :status WHERE job_order_number = :jobNo", nativeQuery = true)
 		    void updateStatusByJobNumber(@Param("jobNo") String jobNo, @Param("status") String status);
 		    JobOrder findByJobOrderNumber(String jobOrderNumber);
-
+		    boolean existsByJobOrderNumber(String jobOrderNumber);
 		}
 	
 

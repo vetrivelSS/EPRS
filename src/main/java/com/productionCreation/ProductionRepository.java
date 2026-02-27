@@ -17,4 +17,6 @@ public interface ProductionRepository extends JpaRepository<Production, Long> {
 	    @Query(value = "SELECT p.* FROM production p INNER JOIN job_orders j ON p.job_order_number = j.job_order_number WHERE p.status = :status", nativeQuery = true)
 	    List<Production> findByStatusWithNativeJoin(@Param("status") String status);
 	    Production findByJobOrderNumber(String jobOrderNumber);
+	    
+	    
 }
