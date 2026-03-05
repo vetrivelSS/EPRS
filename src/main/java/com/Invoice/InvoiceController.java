@@ -1,6 +1,5 @@
 package com.Invoice;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,12 +19,14 @@ public class InvoiceController {
 
     @Autowired
     private InvoiceRepository invoiceRepository;
-    
+
     @Autowired
     private JobOrderRepository jobOrderRepository;
 
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private InvoicePdfService pdfService; // Ensure this is autowired at the top
 
     // 1. Multiple Invoice / DC Insert API
     @PostMapping("/create")
@@ -34,8 +35,12 @@ public class InvoiceController {
         Map<String, Object> response = new HashMap<>();
         try {
             String mainCustomerName = (String) request.get("customerName"); // Header-il ulla Customer
-            List<Map<String, Object>> dcList = (List<Map<String, Object>>) request.get("deliveryChallans");
-
+            // List<Map<String, Object>> dcList = (List<Map<String, Object>>)
+            // request.get("deliveryChallans");
+            List<Map<String, Object>> dcList = objectMapper.convertValue(
+                    request.get("deliveryChallans"),
+                    new TypeReference<List<Map<String, Object>>>() {
+                    });
             // --- VALIDATION LOGIC START ---
             for (Map<String, Object> dc : dcList) {
                 String joNumber = (String) dc.get("jobOrderNumber");
@@ -52,7 +57,8 @@ public class InvoiceController {
                 // DC-il ulla customer name, Main invoice customer-udan match aaganum
                 if (dcCustomerName == null || !dcCustomerName.equalsIgnoreCase(mainCustomerName)) {
                     response.put("status", 400);
-                    response.put("message", "Error: DC Number " + dc.get("dcNumber") + " belongs to a different customer (" + dcCustomerName + "). Customer name mismatch!");
+                    response.put("message", "Error: DC Number " + dc.get("dcNumber")
+                            + " belongs to a different customer (" + dcCustomerName + "). Customer name mismatch!");
                     return ResponseEntity.badRequest().body(response);
                 }
             }
@@ -84,7 +90,7 @@ public class InvoiceController {
             response.put("status", 200);
             response.put("message", "Success: Validated & Invoice Created");
             response.put("data", savedInvoice);
-            
+
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -93,22 +99,26 @@ public class InvoiceController {
             return ResponseEntity.status(500).body(response);
         }
     }
+
     @PutMapping("/update/{id}")
     @Transactional
-    public ResponseEntity<Map<String, Object>> updateAndRegenerateInvoice(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<Map<String, Object>> updateAndRegenerateInvoice(@PathVariable Long id,
+            @RequestBody Map<String, Object> request) {
         Map<String, Object> response = new HashMap<>();
         try {
             // 1. Pazhaya Invoice-ai fetch panni 'Cancelled' panroam
             Invoice oldInv = invoiceRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
-            
-            oldInv.setStatus("Cancelled"); 
+
+            oldInv.setStatus("Cancelled");
             invoiceRepository.save(oldInv);
 
             // 2. Pudhiya Invoice details-ai edukirom
             String mainCustomerName = (String) request.get("customerName");
-            List<Map<String, Object>> dcList = (List<Map<String, Object>>) request.get("deliveryChallans");
-
+            List<Map<String, Object>> dcList = objectMapper.convertValue(
+                    request.get("deliveryChallans"),
+                    new TypeReference<List<Map<String, Object>>>() {
+                    });
             // --- CUSTOMER VALIDATION ---
             for (Map<String, Object> dc : dcList) {
                 String dcCustomer = (String) dc.get("customerName");
@@ -121,7 +131,7 @@ public class InvoiceController {
             Invoice newInv = new Invoice();
             long nextInvCount = invoiceRepository.count() + 101;
             newInv.setInvoiceNumber("INV-" + nextInvCount); // Pudhu Invoice No
-            
+
             newInv.setCustomerName(mainCustomerName);
             newInv.setBillToAddress((String) request.get("billToAddress"));
             newInv.setShipToAddress((String) request.get("shipToAddress"));
@@ -133,7 +143,7 @@ public class InvoiceController {
                 Double qty = Double.parseDouble(dc.get("quantityKg").toString());
                 Double rate = Double.parseDouble(dc.get("ratePer").toString());
                 Double disc = Double.parseDouble(dc.get("discount").toString());
-                
+
                 Double dcTotal = (qty * rate) - disc;
                 dc.put("totalAmount", dcTotal);
                 grandTotal += dcTotal;
@@ -155,6 +165,7 @@ public class InvoiceController {
             return ResponseEntity.status(500).body(response);
         }
     }
+
     // 2. GET ALL Invoices API (Including Multiple DC details)
     @GetMapping("/all")
     public ResponseEntity<Map<String, Object>> getAllInvoices() {
@@ -174,9 +185,9 @@ public class InvoiceController {
                 // JSON Details-ai thirumba list-aga mathukirom
                 if (inv.getDcDetailsJson() != null) {
                     List<Map<String, Object>> dcs = objectMapper.readValue(
-                        inv.getDcDetailsJson(), 
-                        new TypeReference<List<Map<String, Object>>>() {}
-                    );
+                            inv.getDcDetailsJson(),
+                            new TypeReference<List<Map<String, Object>>>() {
+                            });
                     data.put("selectedDCs", dcs);
                 }
                 formattedList.add(data);
@@ -189,4 +200,36 @@ public class InvoiceController {
             return ResponseEntity.status(500).body(response);
         }
     }
+
+    @GetMapping("/download/{id}")
+    public ResponseEntity<byte[]> downloadInvoicePdf(@PathVariable Long id) {
+        try {
+            // 1. Fetch the Invoice from the database
+            Invoice inv = invoiceRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
+
+            // 2. Convert the stored JSON string back into a List of Maps for the PDF
+            List<Map<String, Object>> items = new ArrayList<>();
+            if (inv.getDcDetailsJson() != null) {
+                items = objectMapper.readValue(
+                        inv.getDcDetailsJson(),
+                        new TypeReference<List<Map<String, Object>>>() {
+                        });
+            }
+
+            // 3. Generate the PDF bytes using your InvoicePdfService
+            byte[] pdfBytes = pdfService.generateInvoicePdf(inv, items);
+
+            // 4. Return the PDF as a downloadable file
+            return ResponseEntity.ok()
+                    .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=" + inv.getInvoiceNumber() + ".pdf")
+                    .body(pdfBytes);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
 }

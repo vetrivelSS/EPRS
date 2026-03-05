@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +27,9 @@ public class DeliveryChallanController {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private PdfGeneratorService pdfService;
+
     // POST API: Store as JSON String
     @PostMapping("/generate")
     public ResponseEntity<Map<String, Object>> generateDC(@RequestBody Map<String, Object> request) {
@@ -32,7 +38,8 @@ public class DeliveryChallanController {
             List<Map<String, Object>> productionList = (List<Map<String, Object>>) request.get("productions");
 
             DeliveryChallan newDC = new DeliveryChallan();
-            newDC.setChallanNumber("DC-" + java.time.LocalDate.now().getYear() + "-" + (dcRepository.count() + 1));
+            newDC.setChallanNumber("DC-" + java.time.LocalDate.now().getYear() + "-" +
+                    (dcRepository.count() + 1));
             newDC.setBillToAddress((String) request.get("billToAddress"));
             newDC.setShipToAddress((String) request.get("shipToAddress"));
 
@@ -73,51 +80,52 @@ public class DeliveryChallanController {
     }
 
     // GET ALL API
-//    @GetMapping("/all")
-//    public ResponseEntity<Map<String, Object>> getAllDC() {
-//        Map<String, Object> response = new HashMap<>();
-//        try {
-//            List<DeliveryChallan> allDCs = dcRepository.findAll();
-//            List<Map<String, Object>> formattedList = new ArrayList<>();
-//
-//            for (DeliveryChallan dc : allDCs) {
-//                Map<String, Object> data = new HashMap<>();
-//                data.put("id", dc.getId());
-//                data.put("challanNumber", dc.getChallanNumber());
-//                data.put("totalAmount", dc.getTotalAmount());
-//                data.put("quantityKg", dc.getQuantityKg());
-//                data.put("billToAddress", dc.getBillToAddress());
-//                data.put("shipToAddress", dc.getShipToAddress());
-//
-//                // Parse String back to JSON Array
-//                if (dc.getProductionsJson() != null) {
-//                    List<Map<String, Object>> productions = objectMapper.readValue(
-//                            dc.getProductionsJson(),
-//                            new TypeReference<List<Map<String, Object>>>() {
-//                            });
-//                    data.put("productions", productions);
-//                }
-//                formattedList.add(data);
-//            }
-//            response.put("status", 200);
-//            response.put("data", formattedList);
-//            return ResponseEntity.ok(response);
-//        } catch (Exception e) {
-//            response.put("status", 500);
-//            response.put("message", "Error: " + e.getMessage());
-//            return ResponseEntity.status(500).body(response);
-//        }
-//    }
+    // @GetMapping("/all")
+    // public ResponseEntity<Map<String, Object>> getAllDC() {
+    // Map<String, Object> response = new HashMap<>();
+    // try {
+    // List<DeliveryChallan> allDCs = dcRepository.findAll();
+    // List<Map<String, Object>> formattedList = new ArrayList<>();
+    //
+    // for (DeliveryChallan dc : allDCs) {
+    // Map<String, Object> data = new HashMap<>();
+    // data.put("id", dc.getId());
+    // data.put("challanNumber", dc.getChallanNumber());
+    // data.put("totalAmount", dc.getTotalAmount());
+    // data.put("quantityKg", dc.getQuantityKg());
+    // data.put("billToAddress", dc.getBillToAddress());
+    // data.put("shipToAddress", dc.getShipToAddress());
+    //
+    // // Parse String back to JSON Array
+    // if (dc.getProductionsJson() != null) {
+    // List<Map<String, Object>> productions = objectMapper.readValue(
+    // dc.getProductionsJson(),
+    // new TypeReference<List<Map<String, Object>>>() {
+    // });
+    // data.put("productions", productions);
+    // }
+    // formattedList.add(data);
+    // }
+    // response.put("status", 200);
+    // response.put("data", formattedList);
+    // return ResponseEntity.ok(response);
+    // } catch (Exception e) {
+    // response.put("status", 500);
+    // response.put("message", "Error: " + e.getMessage());
+    // return ResponseEntity.status(500).body(response);
+    // }
+    // }
 
     @PutMapping("/update/{id}")
     @Transactional
-    public ResponseEntity<Map<String, Object>> updateAndRegenerateDC(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+    public ResponseEntity<Map<String, Object>> updateAndRegenerateDC(@PathVariable Long id,
+            @RequestBody Map<String, Object> request) {
         Map<String, Object> response = new HashMap<>();
         try {
             // 1. Pazhaya DC record-ai fetch panni "Cancelled" endru maatrukirom
             DeliveryChallan oldDC = dcRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("DC not found with id: " + id));
-            
+
             oldDC.setStatus("Cancelled"); // Status-ai Cancelled-aga maatrukirom
             dcRepository.save(oldDC);
 
@@ -128,12 +136,12 @@ public class DeliveryChallanController {
             String customerName = (String) request.get("customerName");
 
             DeliveryChallan newDC = new DeliveryChallan();
-            
+
             // --- Pudhiya DC Number Generate Seiyum Logic ---
             // Idhu sequence-ai increment seithu pudhu number tharum
             long nextCount = dcRepository.count() + 1;
             newDC.setChallanNumber("DC-" + (1234 + nextCount) + "-" + java.time.LocalDate.now().getYear());
-            
+
             newDC.setBillToAddress(billTo);
             newDC.setShipToAddress(shipTo);
             newDC.setCustomerName(customerName);
@@ -149,9 +157,10 @@ public class DeliveryChallanController {
                 totalAmt += Double.parseDouble(item.get("totalAmount").toString());
                 String qtyOnly = item.get("quentity").toString().replaceAll("[^0-9.]", "");
                 totalQty += Double.parseDouble(qtyOnly);
-                
+
                 prodNumbers.append(item.get("productionNumber"));
-                if (i < productionList.size() - 1) prodNumbers.append(", ");
+                if (i < productionList.size() - 1)
+                    prodNumbers.append(", ");
             }
 
             newDC.setTotalAmount(totalAmt);
@@ -174,7 +183,7 @@ public class DeliveryChallanController {
 
             response.put("status", 200);
             response.put("message", "Old DC Cancelled & New DC Generated Successfully");
-            response.put("data", savedDC); 
+            response.put("data", savedDC);
 
             return ResponseEntity.ok(response);
 
@@ -184,6 +193,7 @@ public class DeliveryChallanController {
             return ResponseEntity.status(500).body(response);
         }
     }
+
     @GetMapping("/all")
     public ResponseEntity<Map<String, Object>> getAllDCC() {
         Map<String, Object> response = new HashMap<>();
@@ -194,7 +204,7 @@ public class DeliveryChallanController {
 
             for (DeliveryChallan dc : allDCs) {
                 Map<String, Object> data = new HashMap<>();
-                
+
                 // Basic Fields mapping
                 data.put("id", dc.getId());
                 data.put("challanNumber", dc.getChallanNumber());
@@ -203,22 +213,22 @@ public class DeliveryChallanController {
                 data.put("shipToAddress", dc.getShipToAddress());
                 data.put("totalAmount", dc.getTotalAmount());
                 data.put("quantityKg", dc.getQuantityKg());
-                
+                // data.put("quantityNo", dc.getQuantityNo());
                 // --- MUKKIYAM: Status field-ai inge add seigiroam ---
                 // Idhu 'Active' illai 'Cancelled' endru kaattum
-                data.put("status", dc.getStatus() != null ? dc.getStatus() : "Active"); 
-                
+                data.put("status", dc.getStatus() != null ? dc.getStatus() : "Active");
+
                 data.put("transport", dc.getTransport());
                 data.put("vehicleNumber", dc.getVehicleNumber());
                 data.put("productionNumber", dc.getProductionNumber());
 
-                // 2. JSON String-ai thirumba Array-aga mathugirom
+                // 2. JSON String-ai thir./mvnw spring-boot:runumba Array-aga mathugirom
                 if (dc.getProductionsJson() != null) {
                     try {
                         List<Map<String, Object>> productions = objectMapper.readValue(
-                            dc.getProductionsJson(), 
-                            new TypeReference<List<Map<String, Object>>>() {}
-                        );
+                                dc.getProductionsJson(),
+                                new TypeReference<List<Map<String, Object>>>() {
+                                });
                         data.put("productions", productions);
                     } catch (Exception e) {
                         data.put("productions", new ArrayList<>());
@@ -241,5 +251,35 @@ public class DeliveryChallanController {
             response.put("message", "Error: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
+    }
+
+    @GetMapping("/download-pdf/{id}")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id) {
+        // Changed dcRepo to dcRepository to match your Autowired variable
+        DeliveryChallan dc = dcRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Challan not found"));
+
+        byte[] pdfContent = pdfService.generateChallanPdf(dc);
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=Challan_" + id + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfContent);
+    }
+
+    @GetMapping("/download-by-number/{dcNumber}") // Add this mapping
+    public ResponseEntity<byte[]> getChallanPdf(@PathVariable String dcNumber) {
+
+        // FIX: Changed 'repository' to 'dcRepository'
+        DeliveryChallan dc = dcRepository.findByChallanNumber(dcNumber)
+                .orElseThrow(() -> new RuntimeException("DC " + dcNumber + " not found"));
+
+        byte[] pdfBytes = pdfService.generateChallanPdf(dc);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition",
+                        "attachment; filename=\"Challan_" + dcNumber.replace("/", "-") + ".pdf\"")
+                .body(pdfBytes);
     }
 }
