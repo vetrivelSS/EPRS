@@ -1,145 +1,3 @@
-// package com.productionCreation;
-
-// import com.jobOrderCreation.BaseResponse;
-// import com.jobOrderCreation.JobOrder;
-// import com.jobOrderCreation.JobOrderRepository;
-// import com.productionCreation.Production;
-// import com.productionCreation.ProductionRepository;
-// import java.util.List;
-// import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.http.ResponseEntity;
-// import org.springframework.web.bind.annotation.CrossOrigin;
-// import org.springframework.web.bind.annotation.GetMapping;
-// import org.springframework.web.bind.annotation.PathVariable;
-// import org.springframework.web.bind.annotation.PostMapping;
-// import org.springframework.web.bind.annotation.RequestBody;
-// import org.springframework.web.bind.annotation.RequestMapping;
-// import org.springframework.web.bind.annotation.RestController;
-
-// @RestController
-// @RequestMapping(value = { "/api/production" })
-// @CrossOrigin(value = { "*" })
-// public class ProductionController {
-
-//     @Autowired
-//     private ProductionRepository productionRepo;
-
-//     @Autowired
-//     private JobOrderRepository jobOrderRepo;
-
-//     @GetMapping(value = { "/pending-from-joborders" })
-//     public ResponseEntity<Object> getPendingJobs() {
-//         List<JobOrder> pending = this.jobOrderRepo.findByStatus("PENDING");
-//         return ResponseEntity.ok(new BaseResponse(200, "Pending Jobs Fetched", pending));
-//     }
-
-//     @GetMapping(value = { "/all-joborders" })
-//     public ResponseEntity<Object> getAllJobs() {
-//         List<JobOrder> allJobs = this.jobOrderRepo.findAll();
-//         return ResponseEntity.ok(new BaseResponse(200, "All Job Orders Fetched Successfully", allJobs));
-//     }
-
-//     @GetMapping(value = { "/all-productions" })
-//     public ResponseEntity<Object> getAllProductions() {
-//         try {
-//             List<Production> productionList = this.productionRepo.findAll();
-//             if (productionList.isEmpty()) {
-//                 return ResponseEntity.ok(new BaseResponse(200, "No production records found", productionList));
-//             }
-//             return ResponseEntity.ok(new BaseResponse(200, "Production data fetched successfully", productionList));
-//         } catch (Exception e) {
-//             return ResponseEntity.status(500).body(new BaseResponse(500, "Error: " + e.getMessage(), null));
-//         }
-//     }
-
-//     @PostMapping(value = { "/start-inprogress/{jobNumber}" })
-//     public ResponseEntity<Object> startProgress(@PathVariable String jobNumber) {
-//         JobOrder job = this.jobOrderRepo.findByJobOrderNumber(jobNumber);
-//         if (job == null) {
-//             return ResponseEntity.status(404).body(new BaseResponse(404, "Job Order Not Found", null));
-//         }
-
-//         // Update Job Order Status
-//         job.setStatus("IN PROGRESS");
-//         this.jobOrderRepo.save(job); // Removed (Object) cast
-
-//         // Create New Production Entry
-//         Production newProduction = new Production();
-//         newProduction.setJobOrderNumber(job.getJobOrderNumber());
-//         newProduction.setCustomerName(job.getCustomerName());
-//         newProduction.setMaterial(job.getMaterial());
-//         newProduction.setThickness(job.getThickness());
-//         newProduction.setProcess(job.getProcess());
-//         newProduction.setQuantityNo(job.getQuantityNo());
-//         newProduction.setHsnCode(job.getHsnCode()); // If JobOrder has HSN
-
-//         newProduction.setStatus("IN PROGRESS");
-//         // **************
-
-//         // ***************
-//         // Save and get the ID to generate Production Number
-//         newProduction = this.productionRepo.save(newProduction); // Removed (Object) cast
-
-//         String generatedNo = "PRD-" + newProduction.getId();
-//         newProduction.setProductionNumber(generatedNo);
-
-//         // Update with generated ID
-//         this.productionRepo.save(newProduction); // Removed (Object) cast
-
-//         return ResponseEntity.ok(new BaseResponse(200, "Production Started: " + generatedNo, newProduction));
-//     }
-
-//     @PostMapping(value = { "/submit-production-completed" })
-//     public ResponseEntity<Object> submitProduction(@RequestBody Production req) {
-//         try {
-//             Production existingRecord = this.productionRepo.findByJobOrderNumber(req.getJobOrderNumber());
-//             if (existingRecord == null) {
-//                 return ResponseEntity.status(404)
-//                         .body(new BaseResponse(404, "Error: Production record not found!", null));
-//             }
-//             if (!"COMPLETED".equalsIgnoreCase(req.getStatus())) {
-//                 return ResponseEntity.status(400)
-//                         .body(new BaseResponse(400, "Error: Status must be 'COMPLETED' to move to history.", null));
-//             }
-//             if (req.getFinishedQuantity() == null || req.getScrapQuantity() == null || req.getScrapType() == null) {
-//                 return ResponseEntity.status(400)
-//                         .body(new BaseResponse(400, "Error: Please fill all fields before completing.", null));
-//             }
-
-//             existingRecord.setFinishedQuantity(req.getFinishedQuantity());
-//             existingRecord.setBalanceQuantity(req.getBalanceQuantity());
-//             existingRecord.setScrapQuantity(req.getScrapQuantity());
-//             existingRecord.setScrapType(req.getScrapType());
-//             existingRecord.setCompletedDate(req.getCompletedDate());
-//             existingRecord.setProductionDate(req.getProductionDate());
-//             existingRecord.setQuantityNo(req.getQuantityNo());
-//             existingRecord.setQuantityNo(req.getQuantityKg());
-
-//             existingRecord.setRemarks(req.getRemarks());
-//             existingRecord.setStatus("COMPLETED");
-
-//             Production saved = this.productionRepo.save(existingRecord);
-
-//             // (Object) cast
-
-//             this.jobOrderRepo.updateStatusByJobNumber(req.getJobOrderNumber(), "COMPLETED");
-
-//             return ResponseEntity.ok(new BaseResponse(200, "Production marked as COMPLETED successfully", saved));
-//         } catch (Exception e) {
-//             return ResponseEntity.status(500).body(new BaseResponse(500, "System Error: " + e.getMessage(), null));
-//         }
-//     }
-
-//     @GetMapping(value = { "/list-all-status/{status}" })
-//     public ResponseEntity<Object> getListByStatus(@PathVariable String status) {
-//         List<Production> list = this.productionRepo.findProductionByStatus(status.toUpperCase());
-//         return ResponseEntity.ok(new BaseResponse(200, "Data fetched", list));
-//     }
-// }
-
-// ***********OLD CODE*************
-
-// **********New CODE***********
 package com.productionCreation;
 
 import com.jobOrderCreation.JobOrder;
@@ -148,11 +6,11 @@ import com.jobOrderCreation.BaseResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.Map;
-import com.productionCreation.ProductionDailyProgressRepository; // Ensure this path is correct
-import java.util.HashMap; // Usually needed alongside Map
+// import java.util.Map;
+// import com.productionCreation.ProductionDailyProgressRepository; 
+// import java.util.HashMap; 
 import java.util.List;
-import java.util.ArrayList;
+// import java.util.ArrayList;
 
 @RestController
 @RequestMapping("/api/production")
@@ -164,8 +22,12 @@ public class ProductionController {
 
     @Autowired
     private JobOrderRepository jobOrderRepo;
+
     @Autowired
     private ProductionDailyProgressRepository dailyRepo;
+
+    @Autowired
+    private MaterialBalanceRepository materialRepo;
 
     // START PRODUCTION: Prevents duplicate starts
 
@@ -285,137 +147,6 @@ public class ProductionController {
         }
     }
 
-    // @GetMapping("/fetch-by-number/{prodNumber}")
-    // public ResponseEntity<Object> getByProdNumber(@PathVariable String
-    // prodNumber) {
-    // // Note: You must add 'findByProductionNumber' to your ProductionRepository
-    // // first
-    // Production prod = productionRepo.findByProductionNumber(prodNumber);
-
-    // if (prod != null) {
-    // // This will return the 4 fields + others you mapped:
-    // // 1. Material, 2. Thickness, 3. Process, 4. FinishedQuantity (Received Qty)
-    // return ResponseEntity.ok(new BaseResponse(200, "Data Fetched", prod));
-    // } else {
-    // return ResponseEntity.status(404)
-    // .body(new BaseResponse(404, "Error: Production Number not found.", null));
-    // }
-    // }
-
-    // @PostMapping("/add-daily-progress")
-    // public ResponseEntity<Object> addDaily(@RequestBody ProductionDailyProgress
-    // req) {
-    // try {
-    // // 1. STRICT FIELD VALIDATION
-    // if (req.getProductionNumber() == null ||
-    // req.getProductionNumber().trim().isEmpty() ||
-    // req.getFinishedQuantity() == null ||
-    // req.getProductionDate() == null || req.getProductionDate().trim().isEmpty())
-    // {
-
-    // return ResponseEntity.status(400)
-    // .body(new BaseResponse(400,
-    // "Validation Error: Production Number, Finished Quantity, and Production Date
-    // are mandatory.",
-    // null));
-    // }
-
-    // // 2. EXISTENCE CHECK: Verify the Production Number exists in the main table
-    // Production mainProd =
-    // productionRepo.findByProductionNumber(req.getProductionNumber());
-    // if (mainProd == null) {
-    // return ResponseEntity.status(404)
-    // .body(new BaseResponse(404, "Not Found: The Production Number '" +
-    // req.getProductionNumber()
-    // + "' does not exist in the main records.", null));
-    // }
-
-    // // 3. SUCCESS PATH: Save to Daily Progress Table
-    // ProductionDailyProgress saved = dailyRepo.save(req);
-    // return ResponseEntity.status(201).body(new BaseResponse(201, "Daily Progress
-    // Added Successfully", saved));
-
-    // }
-    // // 1. Specific Child First: Handles Data Integrity (e.g., column overflow,
-    // // constraint violations)
-    // catch (org.springframework.dao.DataIntegrityViolationException e) {
-    // return ResponseEntity.status(400)
-    // .body(new BaseResponse(400,
-    // "Data Error: The values provided violate database constraints (e.g. data too
-    // long or invalid format).",
-    // null));
-    // }
-    // // 2. General Parent Second: Handles general database access issues (e.g., DB
-    // is
-    // // offline)
-    // catch (org.springframework.dao.DataAccessException e) {
-    // return ResponseEntity.status(500)
-    // .body(new BaseResponse(500, "Database Error: Communication failure. " +
-    // e.getMessage(), null));
-    // }
-    // // 3. Logic Error: Catch unexpected Null pointers
-    // catch (NullPointerException e) {
-    // return ResponseEntity.status(500)
-    // .body(new BaseResponse(500, "Logic Error: A null value was encountered during
-    // processing.", null));
-    // }
-    // // 4. Catch All: Any other unexpected Java exceptions
-    // catch (Exception e) {
-    // return ResponseEntity.status(500)
-    // .body(new BaseResponse(500, "Unknown Server Error: " + e.getMessage(),
-    // null));
-    // }
-    // }
-
-    // @PostMapping("/add-daily-progress")
-    // public ResponseEntity<Object> addDaily(@RequestBody ProductionDailyProgress
-    // req) {
-    // try {
-    // // 1. VALIDATION
-    // if (req.getProductionNumber() == null || req.getFinishedQuantity() == null) {
-    // return ResponseEntity.status(400)
-    // .body(new BaseResponse(400, "Validation Error: Production Number and Finished
-    // Qty are required.", null));
-    // }
-
-    // // 2. FIND MAIN PRODUCTION RECORD
-    // Production mainProd =
-    // productionRepo.findByProductionNumber(req.getProductionNumber());
-    // if (mainProd == null) {
-    // return ResponseEntity.status(404)
-    // .body(new BaseResponse(404, "Not Found: Main Production record not found.",
-    // null));
-    // }
-
-    // // 3. SAVE DAILY PROGRESS
-    // ProductionDailyProgress savedDaily = dailyRepo.save(req);
-
-    // // 4. AUTO-STATUS CHANGE (The "Complete" Button Logic)
-    // if (req.getRemarks() != null &&
-    // req.getRemarks().equalsIgnoreCase("COMPLETE")) {
-    // mainProd.setStatus("COMPLETED");
-    // productionRepo.save(mainProd); // This updates the 'production' table
-    // automatically
-    // }
-
-    // return ResponseEntity.status(201)
-    // .body(new BaseResponse(201, "Daily Progress Saved and Status Updated",
-    // savedDaily));
-
-    // }
-    // catch (org.springframework.dao.DataIntegrityViolationException e) {
-    // return ResponseEntity.status(400)
-    // .body(new BaseResponse(400, "Data Error: Constraint violation.", null));
-    // }
-    // catch (org.springframework.dao.DataAccessException e) {
-    // return ResponseEntity.status(500)
-    // .body(new BaseResponse(500, "Database Error: " + e.getMessage(), null));
-    // }
-    // catch (Exception e) {
-    // return ResponseEntity.status(500)
-    // .body(new BaseResponse(500, "Unknown Error: " + e.getMessage(), null));
-    // }
-    // }
     @PostMapping("/add-daily-progress")
     public ResponseEntity<Object> addDaily(@RequestBody ProductionDailyProgress req) {
         try {
@@ -462,59 +193,93 @@ public class ProductionController {
         }
     }
 
-    @PutMapping("/update-daily-progress/{prodNumber}")
-    public ResponseEntity<Object> updateDaily(@PathVariable String prodNumber,
-            @RequestBody ProductionDailyProgress progressReq) {
+    @PostMapping("/add-material-balance")
+    public ResponseEntity<Object> addMaterialBalance(@RequestBody MaterialBalance req) {
         try {
-            // ERROR 1: Validate Path Variable (Is the URL empty?)
-            if (prodNumber == null || prodNumber.trim().isEmpty()) {
+            // 1. MANDATORY FIELD VALIDATION
+            if (req.getProductionNumber() == null || req.getReceivedQuantityKg() == null) {
                 return ResponseEntity.status(400)
-                        .body(new BaseResponse(400, "Error: Production Number is missing from URL.", null));
+                        .body(new BaseResponse(400,
+                                "Validation Error: Production Number and Received Qty are mandatory.", null));
             }
 
-            // ERROR 2: Verify Main Record (Does this PRD Number exist in the system?)
-            Production mainProd = productionRepo.findByProductionNumber(prodNumber);
+            // 2. FIND AND LOCK CHECK
+            Production mainProd = productionRepo.findByProductionNumber(req.getProductionNumber());
             if (mainProd == null) {
                 return ResponseEntity.status(404)
-                        .body(new BaseResponse(404, "Error: Production Number '" + prodNumber + "' not found.", null));
+                        .body(new BaseResponse(404,
+                                "Not Found: Record for " + req.getProductionNumber() + " doesn't exist.", null));
             }
 
-            // ERROR 3: Validate Request Body (Is the JSON empty or missing fields?)
-            if (progressReq == null || progressReq.getFinishedQuantity() == null) {
-                return ResponseEntity.status(400)
-                        .body(new BaseResponse(400, "Error: Daily progress data (finishedQuantity) is required.",
+            // --- LOCK LOGIC ---
+            if ("COMPLETED".equalsIgnoreCase(mainProd.getStatus())) {
+                return ResponseEntity.status(403)
+                        .body(new BaseResponse(403,
+                                "Access Denied: This production is already COMPLETED and cannot be modified.", null));
+            }
+
+            // 3. CALCULATIONS
+            double finished = (req.getFinishedQuantity() != null) ? req.getFinishedQuantity() : 0.0;
+            double scrap = (req.getScrapQuantity() != null) ? req.getScrapQuantity() : 0.0;
+            double calcBalance = req.getReceivedQuantityKg() - (finished + scrap);
+
+            req.setBalanceQuantity(calcBalance);
+            req.setStatus("COMPLETED");
+
+            // 4. SAVE (Main Table first, then Balance Table)
+            mainProd.setStatus("COMPLETED");
+            productionRepo.save(mainProd);
+            MaterialBalance saved = materialRepo.save(req);
+
+            return ResponseEntity.status(201)
+                    .body(new BaseResponse(201, "Material Balance Saved. Status: COMPLETED.", saved));
+
+        }
+        // ERROR 1: Constraint Violation (e.g. number too large for database column)
+        catch (org.springframework.dao.DataIntegrityViolationException e) {
+            return ResponseEntity.status(400)
+                    .body(new BaseResponse(400, "Data Error: Invalid format or database constraint violation.", null));
+        }
+        // ERROR 2: Database Connectivity (e.g. MySQL is offline)
+        catch (org.springframework.dao.DataAccessException e) {
+            return ResponseEntity.status(500)
+                    .body(new BaseResponse(500, "Database Error: Could not connect to the database server.", null));
+        }
+        // ERROR 3: Null pointer safety (if a variable is unexpectedly null)
+        catch (NullPointerException e) {
+            return ResponseEntity.status(500)
+                    .body(new BaseResponse(500, "Logic Error: A null value was encountered during processing.", null));
+        }
+        // ERROR 4: Catch-all for everything else
+        catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new BaseResponse(500, "Unknown Error: " + e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/get-material-balance/{productionNumber}")
+    public ResponseEntity<Object> getMaterialBalance(@PathVariable String productionNumber) {
+        try {
+            // 1. Fetch data from repository
+            List<MaterialBalance> balanceList = materialRepo.findByProductionNumber(productionNumber);
+
+            // 2. Check if data exists
+            if (balanceList.isEmpty()) {
+                return ResponseEntity.status(404)
+                        .body(new BaseResponse(404, "No material balance records found for: " + productionNumber,
                                 null));
             }
 
-            // 1. Map the URL PRD Number to the new daily entry
-            progressReq.setProductionNumber(prodNumber);
+            // 3. Return success
+            return ResponseEntity.status(200)
+                    .body(new BaseResponse(200, "Material Balance details fetched successfully.", balanceList));
 
-            // 2. Set Status (This ensures the daily row shows "IN PROGRESS")
-            progressReq.setStatus("IN PROGRESS");
-
-            // 3. Update Main Table Status (Only if it was PENDING)
-            if ("PENDING".equalsIgnoreCase(mainProd.getStatus())) {
-                mainProd.setStatus("IN PROGRESS");
-                productionRepo.save(mainProd);
-            }
-
-            // 4. Save to Daily Table (Creates ID 1, then ID 2, then ID 3...)
-            dailyRepo.save(progressReq);
-
-            // 5. Fetch History (Gets the full list for Postman response)
-            List<ProductionDailyProgress> history = dailyRepo.findByProductionNumber(prodNumber);
-
-            return ResponseEntity.ok(new BaseResponse(200, "Update Success for " + prodNumber, history));
-
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            // ERROR 4: Database Error (e.g., column too short, null constraint)
-            return ResponseEntity.status(400)
-                    .body(new BaseResponse(400, "Database Error: Data format mismatch or constraint violation.", null));
-
-        } catch (Exception e) {
-            // ERROR 5: General System Failure (The "Catch All")
+        } catch (org.springframework.dao.DataAccessException e) {
             return ResponseEntity.status(500)
-                    .body(new BaseResponse(500, "System Error: " + e.getMessage(), null));
+                    .body(new BaseResponse(500, "Database Error: Could not reach the server.", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new BaseResponse(500, "Error: " + e.getMessage(), null));
         }
     }
 
@@ -543,57 +308,12 @@ public class ProductionController {
                             null));
 
         } catch (Exception e) {
-            // ERROR 3: General System Failure (Database down, etc.)
+            // ERROR 3: General System Failure (Datagitbase down, etc.)
             return ResponseEntity.status(500)
                     .body(new BaseResponse(500, "Error Thrown: System failure during deletion. " + e.getMessage(),
                             null));
         }
     }
-    //needed ******************
-
-    // @PutMapping("/submit-final-production/{prodNumber}")
-    // public ResponseEntity<Object> submitFinal(@PathVariable String prodNumber,
-    // @RequestBody Production finalReq) {
-    // try {
-    // // 1. Fetch the main record to be closed
-    // Production existing = productionRepo.findByProductionNumber(prodNumber);
-
-    // if (existing == null) {
-    // return ResponseEntity.status(404)
-    // .body(new BaseResponse(404, "Error: Production '" + prodNumber + "' not
-    // found.", null));
-    // }
-
-    // // 2. Map the 6 Fields you requested for the final page
-    // existing.setFinishedQuantity(finalReq.getFinishedQuantity()); // 1. From UI
-    // (Received/Finished mapping)
-    // existing.setBalanceQuantity(finalReq.getBalanceQuantity()); // 2. Balance
-    // existing.setScrapQuantity(finalReq.getScrapQuantity()); // 3. Scrap Qty
-    // existing.setScrapType(finalReq.getScrapType()); // 4. Scrap Type
-    // existing.setRemarks(finalReq.getRemarks()); // 5. Remarks
-    // // Note: 'Received Quantity' usually comes from the Job Order linked earlier
-
-    // // 3. Finalize Status
-    // existing.setStatus("COMPLETED");
-    // existing.setCompletedDate(java.time.LocalDate.now().toString());
-
-    // // 4. Save the Final Record
-    // Production saved = productionRepo.save(existing);
-
-    // // 5. Sync with Job Order (Optional but recommended)
-    // jobOrderRepo.updateStatusByJobNumber(existing.getJobOrderNumber(),
-    // "COMPLETED");
-
-    // return ResponseEntity.ok(new BaseResponse(200, "Production Fully Completed
-    // Successfully", saved));
-
-    // } catch (Exception e) {
-    // return ResponseEntity.status(500)
-    // .body(new BaseResponse(500, "Final Submit Error: " + e.getMessage(), null));
-    // }
-    // }
-
-    // needed***********************
 
     @GetMapping("/get-daily-history/{prodNumber}")
     public ResponseEntity<Object> getDailyHistory(@PathVariable String prodNumber) {
@@ -602,7 +322,6 @@ public class ProductionController {
             // Repo
             List<ProductionDailyProgress> history = dailyRepo.findByProductionNumber(prodNumber);
 
-            // ERROR: If the list is empty, inform the user
             if (history.isEmpty()) {
                 return ResponseEntity.status(404)
                         .body(new BaseResponse(404, "Error: No daily updates found for " + prodNumber, null));
@@ -612,7 +331,7 @@ public class ProductionController {
             return ResponseEntity.ok(new BaseResponse(200, "History Fetched Successfully", history));
 
         } catch (Exception e) {
-            // ERROR: General System Failure
+
             return ResponseEntity.status(500)
                     .body(new BaseResponse(500, "Error Thrown: System failure. " + e.getMessage(), null));
         }
