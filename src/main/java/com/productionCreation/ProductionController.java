@@ -6,7 +6,8 @@ import com.jobOrderCreation.BaseResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.Map;
+import java.util.HashMap;
 import java.util.HashMap;
 // import java.util.Map;
 // import com.productionCreation.ProductionDailyProgressRepository; 
@@ -31,62 +32,92 @@ public class ProductionController {
     @Autowired
     private MaterialBalanceRepository materialRepo;
 
+    // START PRODUCTION: Prevents duplicate starts
+
+    @PostMapping("/create-production")
+    public ResponseEntity<Object> createProduction(@RequestBody Production req) {
+        try {
+            // 1. STRICT FIELD VALIDATION
+            if (req.getJobOrderNumber() == null || req.getJobOrderNumber().trim().isEmpty() ||
+                    req.getMaterial() == null || req.getMaterial().trim().isEmpty() ||
+                    req.getReceivedQuantityKg() == null) {
+
+                return ResponseEntity.status(400)
+                        .body(new BaseResponse(400, "Validation Error: Missing mandatory fields.", null));
+            }
+
+            // 2. CHECK IF JOB ORDER EXISTS
+            JobOrder job = jobOrderRepo.findByJobOrderNumber(req.getJobOrderNumber());
+            if (job == null) {
+                return ResponseEntity.status(404)
+                        .body(new BaseResponse(404, "Not Found: Job Order Number does not exist.", null));
+            }
+
+            // 3. CHECK FOR DUPLICATES
+            Production existingProd = productionRepo.findByJobOrderNumber(req.getJobOrderNumber());
+            if (existingProd != null) {
+                return ResponseEntity.status(409)
+                        .body(new BaseResponse(409, "Conflict: Production record already exists for this Job Order.",
+                                null));
+            }
+
+            // 4. MAPPING
+            Production newProd = new Production();
+            newProd.setJobOrderNumber(req.getJobOrderNumber());
+            newProd.setMaterial(req.getMaterial());
+            newProd.setThickness(req.getThickness());
+            newProd.setProcess(req.getProcess());
+            newProd.setStatus(req.getStatus());
+            newProd.setReceivedQuantityKg(req.getReceivedQuantityKg());
+            newProd.setRemarks(req.getRemarks());
+
+            // --- UPDATED STATUS ---
+            newProd.setStatus("INPROGRESS");
+
+            // 5. SEQUENTIAL PRODUCTION NUMBER GENERATION (PRD-01-2026)
+            long currentCount = productionRepo.count();
+            String generatedNo = String.format("PRD-%02d-%d",
+                    (currentCount + 1),
+                    java.time.LocalDate.now().getYear());
+            newProd.setProductionNumber(generatedNo);
+
+            // 6. SAVE
+            Production saved = productionRepo.save(newProd);
+
+            return ResponseEntity.status(201)
+                    .body(new BaseResponse(201, "Production Created Successfully", saved));
+
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            return ResponseEntity.status(400)
+                    .body(new BaseResponse(400, "Database Error: Data integrity violation.", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new BaseResponse(500, "Internal Server Error: " + e.getMessage(), null));
+        }
+    }
+
     @GetMapping("/fetch-job-details/{jobOrderNumber}")
     public ResponseEntity<Object> fetchJobDetails(@PathVariable String jobOrderNumber) {
         try {
-            // --- 1. VALIDATION CATCH ---
-            if (jobOrderNumber == null || jobOrderNumber.trim().isEmpty()) {
-                BaseResponse error = new BaseResponse(400, "Validation Error: Job Order Number cannot be empty.", null);
-                return new ResponseEntity<>(error, org.springframework.http.HttpStatus.BAD_REQUEST);
-            }
+            // 1. Get Job Order from Database
+            JobOrder job = jobOrderRepo.findByJobOrderNumber(jobOrderNumber);
 
-            // --- 2. DATABASE REPOSITORY CATCH ---
-            JobOrder job;
-            try {
-                job = jobOrderRepo.findByJobOrderNumber(jobOrderNumber);
-            } catch (org.springframework.dao.DataAccessException e) {
-                BaseResponse error = new BaseResponse(500, "Database Error: Connection failed.", null);
-                return new ResponseEntity<>(error, org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-
-            // --- 3. BUSINESS LOGIC CHECK ---
             if (job == null) {
-                BaseResponse error = new BaseResponse(404, "Not Found: No Job Order exists for " + jobOrderNumber,
-                        null);
-                return new ResponseEntity<>(error, org.springframework.http.HttpStatus.NOT_FOUND);
+                return ResponseEntity.status(404).body(new BaseResponse(404, "Job Order not found", null));
             }
 
-            // --- 4. DATA MAPPING ---
-            // --- 4. DATA MAPPING ---
-            try {
-                java.util.Map<String, Object> details = new java.util.HashMap<>();
+            // 2. Put only the 4 required fields into a Map
+            Map<String, Object> details = new HashMap<>();
+            details.put("material", job.getMaterial());
+            details.put("thickness", job.getThickness());
+            details.put("process", job.getProcess());
+            details.put("receivedQuantityKg", job.getQuantityKg());
 
-                // 1. Get current count and add 1 for the next sequence
-                long nextCount = productionRepo.count() + 1;
+            // 3. Return the response
+            return ResponseEntity.ok(new BaseResponse(200, "Fetched successfully", details));
 
-                // 2. Format as "PRD-01-2026" (using %02d for leading zeros)
-                String formattedNo = String.format("PRD-%02d-%d",
-                        nextCount,
-                        java.time.LocalDate.now().getYear());
-
-                details.put("productionNumber", formattedNo); // Now shows PRD-01-2026, PRD-02-2026, etc.
-                details.put("material", job.getMaterial());
-                details.put("thickness", job.getThickness());
-                details.put("process", job.getProcess());
-                details.put("receivedQuantityKg", job.getQuantityKg());
-                details.put("status", "INPROGRESS");
-                details.put("remarks", "Enter Remarks Here");
-
-                BaseResponse success = new BaseResponse(200, "Details fetched successfully", details);
-                return new ResponseEntity<>(success, org.springframework.http.HttpStatus.OK);
-
-            } catch (Exception e) {
-                BaseResponse error = new BaseResponse(422, "Data Error: Mapping failed.", null);
-                return new ResponseEntity<>(error, org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY);
-            }
         } catch (Exception e) {
-            BaseResponse error = new BaseResponse(500, "Critical System Error: " + e.getMessage(), null);
-            return new ResponseEntity<>(error, org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(500).body(new BaseResponse(500, "Error: " + e.getMessage(), null));
         }
     }
 
