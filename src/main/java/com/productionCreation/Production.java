@@ -16,7 +16,7 @@ public class Production {
     private String material;
     private Double thickness;
     private String process;
-    private Double finishedQuantity;
+    private Double receivedQuantityKg;
     private String status;
     private String remarks;
 }
