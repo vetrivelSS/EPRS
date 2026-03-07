@@ -19,4 +19,6 @@ public class Production {
     private Double receivedQuantityKg;
     private String status;
     private String remarks;
+    private String createdDate;
+
 }

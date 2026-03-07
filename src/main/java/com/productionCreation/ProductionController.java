@@ -112,6 +112,7 @@ public class ProductionController {
             details.put("thickness", job.getThickness());
             details.put("process", job.getProcess());
             details.put("receivedQuantityKg", job.getQuantityKg());
+            details.put("createdDate", java.time.LocalDate.now().toString());
 
             // 3. Return the response
             return ResponseEntity.ok(new BaseResponse(200, "Fetched successfully", details));

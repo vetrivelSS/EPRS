@@ -9,5 +9,7 @@ public interface MaterialBalanceRepository extends JpaRepository<MaterialBalance
 
     List<MaterialBalance> findByProductionNumber(String productionNumber);
 
+    List<MaterialBalance> findByScrapType(String scrapType);
+
     MaterialBalance findFirstByProductionNumberOrderByIdDesc(String productionNumber);
 }
