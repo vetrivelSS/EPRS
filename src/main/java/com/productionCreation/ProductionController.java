@@ -161,55 +161,68 @@ public class ProductionController {
             }
         }
     }
+
     @Autowired
-private ProductionSummaryRepository productionSummaryRepository;
+    private ProductionResultService productionResultService;
 
-@PostMapping("/add-summary")
-public ResponseEntity<Object> addSummary(@RequestBody ProductionSummary summary) {
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> delete(@PathVariable Integer id) {
 
-    Map<String, Object> response = new HashMap<>();
+        productionResultService.deleteProductionResult(id);
 
-    try {
-
-        ProductionSummary saved = productionSummaryRepository.save(summary);
-
-        response.put("status", 200);
-        response.put("message", "Production Summary Saved Successfully");
-        response.put("data", saved);
-
-        return ResponseEntity.ok(response);
-
-    } catch (Exception e) {
-
-        response.put("status", 500);
-        response.put("message", "Server Error: " + e.getMessage());
-        response.put("data", null);
-
-        return ResponseEntity.status(500).body(response);
+        return ResponseEntity.ok("Deleted Successfully");
     }
-}
-@GetMapping("/summary")
-public ResponseEntity<Object> getAllSummary() {
 
-    Map<String, Object> response = new HashMap<>();
+    @Autowired
+    private ProductionSummaryRepository productionSummaryRepository;
 
-    try {
+    @PostMapping("/add-summary")
+    public ResponseEntity<Object> addSummary(@RequestBody ProductionSummary summary) {
 
-        List<ProductionSummary> list = productionSummaryRepository.findAll();
+        Map<String, Object> response = new HashMap<>();
 
-        response.put("status", 200);
-        response.put("message", "Production Summary List");
-        response.put("data", list);
+        try {
 
-        return ResponseEntity.ok(response);
+            ProductionSummary saved = productionSummaryRepository.save(summary);
 
-    } catch (Exception e) {
+            response.put("status", 200);
+            response.put("message", "Production Summary Saved Successfully");
+            response.put("data", saved);
 
-        response.put("status", 500);
-        response.put("message", "Server Error: " + e.getMessage());
-        response.put("data", null);
+            return ResponseEntity.ok(response);
 
-        return ResponseEntity.status(500).body(response);
+        } catch (Exception e) {
+
+            response.put("status", 500);
+            response.put("message", "Server Error: " + e.getMessage());
+            response.put("data", null);
+
+            return ResponseEntity.status(500).body(response);
+        }
     }
-}
+
+    @GetMapping("/summary")
+    public ResponseEntity<Object> getAllSummary() {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            List<ProductionSummary> list = productionSummaryRepository.findAll();
+
+            response.put("status", 200);
+            response.put("message", "Production Summary List");
+            response.put("data", list);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+
+            response.put("status", 500);
+            response.put("message", "Server Error: " + e.getMessage());
+            response.put("data", null);
+
+            return ResponseEntity.status(500).body(response);
+        }
+    }
 }
