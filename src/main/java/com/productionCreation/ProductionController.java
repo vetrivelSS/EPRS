@@ -16,7 +16,11 @@ import org.springframework.http.ResponseEntity;
 @RestController
 @RequestMapping("/api/production")
 public class ProductionController {
+    @Autowired
+    private ProductionSummaryRepository productionSummaryRepository;
 
+    @Autowired
+    private ProductionResultService productionResultService;
     @Autowired
     private ProductionRepository productionRepository;
 
@@ -102,68 +106,57 @@ public class ProductionController {
         }
     }
 
-    @RestController
-    @RequestMapping("/api/production")
-    public class ProductionResultController {
+    // POST API
+    @PostMapping("/add-result")
+    public ResponseEntity<Object> addResult(@RequestBody ProductionResult result) {
 
-        @Autowired
-        private ProductionResultRepository productionResultRepository;
+        Map<String, Object> response = new HashMap<>();
 
-        // POST API
-        @PostMapping("/add-result")
-        public ResponseEntity<Object> addResult(@RequestBody ProductionResult result) {
+        try {
 
-            Map<String, Object> response = new HashMap<>();
+            ProductionResult saved = productionResultRepository.save(result);
 
-            try {
+            response.put("status", 200);
+            response.put("message", "Production Result Saved");
+            response.put("data", saved);
 
-                ProductionResult saved = productionResultRepository.save(result);
+            return ResponseEntity.ok(response);
 
-                response.put("status", 200);
-                response.put("message", "Production Result Saved");
-                response.put("data", saved);
+        } catch (Exception e) {
 
-                return ResponseEntity.ok(response);
+            response.put("status", 500);
+            response.put("message", "Server Error: " + e.getMessage());
+            response.put("data", null);
 
-            } catch (Exception e) {
-
-                response.put("status", 500);
-                response.put("message", "Server Error: " + e.getMessage());
-                response.put("data", null);
-
-                return ResponseEntity.status(500).body(response);
-            }
-        }
-
-        // GET ALL API
-        @GetMapping("/results")
-        public ResponseEntity<Object> getAllResults() {
-
-            Map<String, Object> response = new HashMap<>();
-
-            try {
-
-                List<ProductionResult> list = productionResultRepository.findAll();
-
-                response.put("status", 200);
-                response.put("message", "Production Results List");
-                response.put("data", list);
-
-                return ResponseEntity.ok(response);
-
-            } catch (Exception e) {
-
-                response.put("status", 500);
-                response.put("message", "Server Error: " + e.getMessage());
-                response.put("data", null);
-
-                return ResponseEntity.status(500).body(response);
-            }
+            return ResponseEntity.status(500).body(response);
         }
     }
 
-    @Autowired
-    private ProductionResultService productionResultService;
+    // GET ALL API
+    @GetMapping("/results")
+    public ResponseEntity<Object> getAllResults() {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            List<ProductionResult> list = productionResultRepository.findAll();
+
+            response.put("status", 200);
+            response.put("message", "Production Results List");
+            response.put("data", list);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+
+            response.put("status", 500);
+            response.put("message", "Server Error: " + e.getMessage());
+            response.put("data", null);
+
+            return ResponseEntity.status(500).body(response);
+        }
+    }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(@PathVariable Integer id) {
@@ -172,9 +165,6 @@ public class ProductionController {
 
         return ResponseEntity.ok("Deleted Successfully");
     }
-
-    @Autowired
-    private ProductionSummaryRepository productionSummaryRepository;
 
     @PostMapping("/add-summary")
     public ResponseEntity<Object> addSummary(@RequestBody ProductionSummary summary) {
