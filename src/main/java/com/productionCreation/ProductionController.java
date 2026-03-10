@@ -172,32 +172,6 @@ public class ProductionController {
         return ResponseEntity.ok("Deleted Successfully");
     }
 
-    // @PostMapping("/add-summary")
-    // public ResponseEntity<Object> addSummary(@RequestBody ProductionSummary
-    // summary) {
-
-    // Map<String, Object> response = new HashMap<>();
-
-    // try {
-
-    // ProductionSummary saved = productionSummaryRepository.save(summary);
-
-    // response.put("status", 200);
-    // response.put("message", "Production Summary Saved Successfully");
-    // response.put("data", saved);
-
-    // return ResponseEntity.ok(response);
-
-    // } catch (Exception e) {
-
-    // response.put("status", 500);
-    // response.put("message", "Server Error: " + e.getMessage());
-    // response.put("data", null);
-
-    // return ResponseEntity.status(500).body(response);
-    // }
-    // }
-
     @PostMapping("/add-summary")
     public ResponseEntity<Object> addSummary(@RequestBody ProductionSummary summary) {
 
