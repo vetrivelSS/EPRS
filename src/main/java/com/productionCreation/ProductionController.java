@@ -63,7 +63,13 @@ public class ProductionController {
     public ResponseEntity<Object> createProduction(@RequestBody Production pro) {
 
         Map<String, Object> response = new HashMap<>();
+        // UPDATE JOB ORDER STATUS
+        JobOrder job = jobOrderRepository.findByJobOrderNumber(pro.getJobOrder());
 
+        if (job != null) {
+            job.setStatus("INPROGRESS");
+            jobOrderRepository.save(job);
+        }
         try {
 
             // 1. CHECK DUPLICATE JOB ORDER
@@ -166,6 +172,32 @@ public class ProductionController {
         return ResponseEntity.ok("Deleted Successfully");
     }
 
+    // @PostMapping("/add-summary")
+    // public ResponseEntity<Object> addSummary(@RequestBody ProductionSummary
+    // summary) {
+
+    // Map<String, Object> response = new HashMap<>();
+
+    // try {
+
+    // ProductionSummary saved = productionSummaryRepository.save(summary);
+
+    // response.put("status", 200);
+    // response.put("message", "Production Summary Saved Successfully");
+    // response.put("data", saved);
+
+    // return ResponseEntity.ok(response);
+
+    // } catch (Exception e) {
+
+    // response.put("status", 500);
+    // response.put("message", "Server Error: " + e.getMessage());
+    // response.put("data", null);
+
+    // return ResponseEntity.status(500).body(response);
+    // }
+    // }
+
     @PostMapping("/add-summary")
     public ResponseEntity<Object> addSummary(@RequestBody ProductionSummary summary) {
 
@@ -174,6 +206,23 @@ public class ProductionController {
         try {
 
             ProductionSummary saved = productionSummaryRepository.save(summary);
+
+            if ("COMPLETED".equalsIgnoreCase(summary.getStatus())) {
+
+                Production production = productionRepository.findByProductionNumber(summary.getProductionNumber());
+
+                if (production != null) {
+
+                    JobOrder job = jobOrderRepository.findByJobOrderNumber(production.getJobOrder());
+
+                    if (job != null) {
+
+                        job.setStatus("COMPLETED");
+                        jobOrderRepository.save(job);
+
+                    }
+                }
+            }
 
             response.put("status", 200);
             response.put("message", "Production Summary Saved Successfully");

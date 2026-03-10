@@ -15,4 +15,5 @@ public interface ProductionRepository extends JpaRepository<Production, Long> {
     @Query("SELECT COUNT(p) FROM Production p WHERE p.jobOrder = :jobNo")
     Long countByJobNo(@Param("jobNo") String jobNo);
 
+    Production findByProductionNumber(String productionNumber);
 }

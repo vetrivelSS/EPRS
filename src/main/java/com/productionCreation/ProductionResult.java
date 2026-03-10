@@ -14,13 +14,13 @@ public class ProductionResult {
     private int finishedQuantity;
 
     private int scrapQuantity;
-
+    private String jobOrder;
     private int balanceQuantity;
 
     private LocalDate productionDate;
 
     private String remark;
-
+    private String scrapType;
     private String productionNumber;
     private LocalDate updateDate;
     private String status;
@@ -103,6 +103,22 @@ public class ProductionResult {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getScrapType() {
+        return scrapType;
+    }
+
+    public void setScrapType(String scrapType) {
+        this.scrapType = scrapType;
+    }
+
+    public String getJobOrder() {
+        return jobOrder;
+    }
+
+    public void setJobOrder(String jobOrder) {
+        this.jobOrder = jobOrder;
     }
 
 }
