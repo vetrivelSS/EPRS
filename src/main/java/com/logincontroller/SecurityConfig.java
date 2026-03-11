@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/business-partner/**", "/api/work-order/**",
                                 "/api/joborders/**", "/api/production/**", "/api/dc/**", "/api/invoice/**",
-                                "/api/ledger/**")
+                                "/api/ledger/**","/api/scrap/**")
                         .permitAll() // Login & Register-ku permission kudukkurom
                         .anyRequest().authenticated() // Matha ella API-kum login panni irukanum
                 )

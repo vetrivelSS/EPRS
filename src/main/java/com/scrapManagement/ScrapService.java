@@ -1,19 +1,20 @@
-// package com.scrapManagement;
+package com.ScrapManagement;
 
-// import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
 
-// import org.springframework.beans.factory.annotation.Autowired;
-// import org.springframework.stereotype.Service;
+@Service
+public class ScrapService {
 
-// @Service
-// public class ScrapService {
+    @Autowired
+    private ScrapRepository scrapRepository;
 
-// @Autowired
-// private ScrapRepository scrapRepository;
+    public List<ScrapRecord> getAllScrapData() {
+        return scrapRepository.findAll();
+    }
 
-// public List<Scrap> getScrapByType(String type) {
-
-// return scrapRepository.findByScrapType(type);
-// }
-
-// }
+    public ScrapRecord saveScrapRecord(ScrapRecord record) {
+        return scrapRepository.save(record);
+    }
+}

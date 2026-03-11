@@ -1,10 +1,9 @@
-// package com.scrapManagement;
+package com.ScrapManagement;
 
-// import java.util.List;
-// import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-// public interface ScrapRepository extends JpaRepository<Scrap, Integer> {
-
-//     List<Scrap> findByScrapType(String scrapType);
-
-// }
+@Repository
+public interface ScrapRepository extends JpaRepository<ScrapRecord, Long> {
+    // Standard CRUD operations are inherited automatically
+}

@@ -5,7 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.jobOrderCreation.JobOrderRepository;
-
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import jakarta.transaction.Transactional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
@@ -231,5 +232,33 @@ public class InvoiceController {
             return ResponseEntity.status(500).body(null);
         }
     }
+    // File: com.Invoice.InvoiceController.java
 
+    @GetMapping("/view-pdf/{invoiceNumber}")
+    public ResponseEntity<byte[]> viewPdfByNumber(@PathVariable String invoiceNumber) {
+        try {
+            // 1. Find the invoice by Number instead of ID
+            Invoice inv = invoiceRepository.findByInvoiceNumber(invoiceNumber)
+                    .orElseThrow(() -> new RuntimeException("Invoice " + invoiceNumber + " not found"));
+
+            // 2. Convert the stored JSON items back to a List
+            List<Map<String, Object>> items = objectMapper.readValue(
+                    inv.getDcDetailsJson(),
+                    new TypeReference<List<Map<String, Object>>>() {
+                    });
+
+            // 3. Generate the PDF bytes
+            byte[] pdfBytes = pdfService.generateInvoicePdf(inv, items);
+
+            // 4. Return as PDF stream
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    // 'inline' tells the browser/Postman to display it, not just download it
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=" + invoiceNumber + ".pdf")
+                    .body(pdfBytes);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(null);
+        }
+    }
 }
