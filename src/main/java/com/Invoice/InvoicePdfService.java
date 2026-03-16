@@ -2,8 +2,14 @@ package com.Invoice;
 
 import org.springframework.stereotype.Service;
 import java.io.ByteArrayOutputStream;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.awt.Color;
@@ -11,7 +17,12 @@ import java.awt.Color;
 @Service
 public class InvoicePdfService {
     // document.add(mainLayout);
-    public byte[] generateInvoicePdf(Invoice inv, List<Map<String, Object>> items) {
+    // public byte[] generateInvoicePdf(Invoice inv, List<Map<String, Object>>
+    // items) {
+    // *******************
+    public byte[] generateInvoicePdf(Map<String, Object> inv, List<Map<String, Object>> items) {
+
+        // ************
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         // Set page size and margins to match the clean look
         Document document = new Document(PageSize.A4, 20, 20, 20, 20);
@@ -45,6 +56,13 @@ public class InvoicePdfService {
         Font normalFont = FontFactory.getFont(FontFactory.HELVETICA, 8);
         Font smallFont = FontFactory.getFont(FontFactory.HELVETICA, 7);
         Font smallBoldFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7); // Fixed your error
+        // 1. Get current System Date
+        String systemDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"));
+
+        Object refObj = inv.get("ref_count");
+        int count = (refObj != null) ? Integer.parseInt(refObj.toString()) : 1;
+        String referenceNo = String.format("%02d", count);
+        // This turns 1 -> "01", 2 -> "02", etc.
 
         // --- 1. Top Title ---
         Paragraph title = new Paragraph("GST INVOICE", titleFont);
@@ -61,7 +79,7 @@ public class InvoicePdfService {
         PdfPCell leftColumn = new PdfPCell();
         leftColumn.setPadding(0);
 
-        // Section A: Company Details (At the very top left)
+        // Section A: Company Details (Already in your code)
         PdfPTable companyTable = new PdfPTable(1);
         companyTable.setWidthPercentage(100);
         PdfPCell cCell = new PdfPCell();
@@ -73,27 +91,30 @@ public class InvoicePdfService {
         companyTable.addCell(cCell);
         leftColumn.addElement(companyTable);
 
-        // Section B: Consignee (Ship to) - Directly below company
-        PdfPTable shipTable = new PdfPTable(1);
-        shipTable.setWidthPercentage(100);
-        PdfPCell sCell = new PdfPCell(new Phrase(
-                "Consignee (Ship to):\n" + inv.getCustomerName() + "\n" + inv.getShipToAddress(),
-                normalFont));
+        // --- FIXED Section B: Consignee (Ship to) ---
+        PdfPTable shipTable = new PdfPTable(1); // ADDED THIS LINE
+        shipTable.setWidthPercentage(100); // ADDED THIS LINE
+
+        String customer = inv.get("customer_name") != null ? inv.get("customer_name").toString() : "N/A";
+        String shipTo = inv.get("ship_to_address") != null ? inv.get("ship_to_address").toString() : "";
+
+        PdfPCell sCell = new PdfPCell(new Phrase("Consignee (Ship to):\n" + customer + "\n" + shipTo, normalFont));
         sCell.setPadding(5);
         sCell.setMinimumHeight(80);
         shipTable.addCell(sCell);
-        leftColumn.addElement(shipTable);
+        leftColumn.addElement(shipTable); // Add shipTable to the column
 
-        // Section C: Buyer (Bill to) - Directly below Consignee
-        PdfPTable billTable = new PdfPTable(1);
-        billTable.setWidthPercentage(100);
-        PdfPCell bCell = new PdfPCell(
-                new Phrase("Buyer (Bill to):\n" + inv.getCustomerName() + "\n" + inv.getBillToAddress(),
-                        normalFont));
+        // --- FIXED Section C: Buyer (Bill to) ---
+        PdfPTable billTable = new PdfPTable(1); // ADDED THIS LINE
+        billTable.setWidthPercentage(100); // ADDED THIS LINE
+
+        String billTo = inv.get("billing_address") != null ? inv.get("billing_address").toString() : "";
+
+        PdfPCell bCell = new PdfPCell(new Phrase("Buyer (Bill to):\n" + customer + "\n" + billTo, normalFont));
         bCell.setPadding(5);
         bCell.setMinimumHeight(80);
         billTable.addCell(bCell);
-        leftColumn.addElement(billTable);
+        leftColumn.addElement(billTable); // Add billTable to the column
 
         mainLayout.addCell(leftColumn);
 
@@ -105,34 +126,26 @@ public class InvoicePdfService {
         metaTable.setWidthPercentage(100);
         metaTable.getDefaultCell().setMinimumHeight(20); // Smaller height for rows
 
-        metaTable.addCell(new Phrase("Invoice No:\n" + inv.getInvoiceNumber(), normalFont));
-        metaTable.addCell(new Phrase("Dated:\n20-Dec-25", normalFont));
+        metaTable.addCell(
+                new Phrase("Invoice No:\n" + String.valueOf(inv.getOrDefault("invoice_number", "N/A")), normalFont));
+        metaTable.addCell(new Phrase("Dated:\n" + systemDate, normalFont));
+        metaTable.addCell(
+                new Phrase("Delivery Note:\n" + String.valueOf(inv.getOrDefault("challan_number", "-")), normalFont));
+        metaTable.addCell(
+                new Phrase("Mode of Payment:\n" + String.valueOf(inv.getOrDefault("payment_terms", "-")), normalFont));
+        metaTable.addCell(new Phrase("Reference No:\n" + referenceNo, normalFont));
+        metaTable.addCell(new Phrase(
+                "Buyer's Order No:\n " + String.valueOf(inv.getOrDefault("purchase_order_number", "-")), normalFont));
+        metaTable.addCell(new Phrase("Delivery Note Date:\n" + String.valueOf(inv.getOrDefault("created_date", "-")),
+                normalFont));
 
-        metaTable.addCell(new Phrase("Delivery Note:\n", normalFont));
-        metaTable.addCell(new Phrase("Mode of Payment:\n", normalFont));
-
-        metaTable.addCell(new Phrase("Reference No. & Date:\n", normalFont));
-        metaTable.addCell(new Phrase("Other Reference:\n", normalFont));
-
-        metaTable.addCell(new Phrase("Buyer's Order No:\n", normalFont));
-        metaTable.addCell(new Phrase("Dated:\n", normalFont));
-
-        metaTable.addCell(new Phrase("Dispatch Doc No:\n", normalFont));
-        metaTable.addCell(new Phrase("Delivery Note Date:\n", normalFont));
-
-        metaTable.addCell(new Phrase("Dispatched through:\n", normalFont));
-        metaTable.addCell(new Phrase("Destination:\n", normalFont));
-
-        // Add enough empty rows to the right table to match the height of the left
-        // column
-        // for (int i = 0; i < 1; i++) {
-        // metaTable.addCell(new Phrase(" \n ", normalFont));
-        // metaTable.addCell(new Phrase(" \n ", normalFont));
-        // }
-
+        String destinationVal = String.valueOf(inv.getOrDefault("destination", "-"));
+        metaTable.addCell(new Phrase("Destination:\n" + destinationVal, normalFont));
         rightColumn.addElement(metaTable);
         mainLayout.addCell(rightColumn);
+        // **
 
+        // ****************
         document.add(mainLayout);
 
         // --- 3. Items Table ---
@@ -145,40 +158,117 @@ public class InvoicePdfService {
             PdfPCell hCell = new PdfPCell(new Phrase(h, boldFont));
             hCell.setHorizontalAlignment(Element.ALIGN_CENTER);
             hCell.setBackgroundColor(Color.LIGHT_GRAY);
+            hCell.setPadding(5);
             itemTable.addCell(hCell);
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        List<Map<String, Object>> itemsList = new ArrayList<>();
+        try {
+            // Get the string: "[{"jobOrderNumber":"JOB-0044", ...}]"
+            String jsonStr = String.valueOf(inv.get("dc_details_json"));
+
+            // Convert that string into a Java List so we can loop through it
+            itemsList = mapper.readValue(jsonStr, new TypeReference<List<Map<String, Object>>>() {
+            });
+        } catch (Exception e) {
+            // If the JSON is empty or malformed, use the provided 'items' list as fallback
+            itemsList = items;
         }
 
         for (int i = 0; i < items.size(); i++) {
             Map<String, Object> item = items.get(i);
+
             itemTable.addCell(createItemCell(String.valueOf(i + 1), normalFont, Element.ALIGN_CENTER));
-            itemTable.addCell(createItemCell(item.get("material").toString(), normalFont, Element.ALIGN_LEFT));
+
+            // 1. Get Values (Check your Map keys! They must match exactly)
+            String material = String.valueOf(item.getOrDefault("material", "N/A"));
+            String width = String.valueOf(item.getOrDefault("width", "0"));
+            String length = String.valueOf(item.getOrDefault("length", "0"));
+            String thickness = String.valueOf(item.getOrDefault("thickness", "0"));
+            String quantityKg = String.valueOf(item.getOrDefault("quantityKg", "0"));
+            // 2. Format exactly like Image 2: "Material _ Length x Width x Thickness -
+            // Quantity Sheets"
+            String fullDescription = String.format("%s _ %s x %s x %smm - %s Sheets",
+                    material, length, width, thickness, quantityKg);
+
+            // 3. Add to Table
+            itemTable.addCell(createItemCell(fullDescription, normalFont, Element.ALIGN_LEFT));
+
+            // Remaining columns
             itemTable.addCell(createItemCell("853620", normalFont, Element.ALIGN_CENTER));
+            String quantityStr = String.valueOf(item.getOrDefault("quantityKg", "0"));
+
+            itemTable.addCell(createItemCell(quantityStr + " Kg", normalFont, Element.ALIGN_RIGHT));
             itemTable.addCell(
-                    createItemCell(item.get("quantityKg").toString() + " Pcs", normalFont, Element.ALIGN_RIGHT));
-            itemTable.addCell(createItemCell(item.get("ratePer").toString(), normalFont, Element.ALIGN_RIGHT));
-            itemTable.addCell(createItemCell(item.get("discount").toString(), normalFont, Element.ALIGN_RIGHT));
-            itemTable.addCell(createItemCell(item.get("totalAmount").toString(), normalFont, Element.ALIGN_RIGHT));
-        }
+                    createItemCell(String.valueOf(item.getOrDefault("ratePer", "0")), normalFont, Element.ALIGN_RIGHT));
+            itemTable.addCell(createItemCell("Kg", normalFont, Element.ALIGN_CENTER));
+            String totalAmountSt = String.valueOf(item.getOrDefault("totalAmount", "0"));
+            itemTable.addCell(createItemCell(totalAmountSt, normalFont, Element.ALIGN_RIGHT));
 
+            // itemTable.addCell(createItemCell(String.valueOf(item.getOrDefault("totalAmount",
+            // "0")), normalFont,
+            // Element.ALIGN_RIGHT));
+        }
         // Fill empty space in Item Table
-        for (int i = 0; i < 5; i++) {
-            for (int j = 0; j < 7; j++)
-                itemTable.addCell(new PdfPCell(new Phrase(" ")));
+        // for (int i = 0; i < 5; i++) {
+        // for (int j = 0; j < 7; j++)
+        // itemTable.addCell(new PdfPCell(new Phrase(" ")));
+        // }
+        for (int i = 0; i < 6; i++) {
+            PdfPCell spacer = new PdfPCell(new Phrase(" "));
+            itemTable.addCell(spacer);
         }
-        document.add(itemTable);
 
+        // Subtotal Row
+        PdfPCell subTotalVal = new PdfPCell(
+                new Phrase(String.valueOf(inv.getOrDefault("taxable_value", "0.00")), boldFont));
+        subTotalVal.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        itemTable.addCell(subTotalVal);
+        // --- SUB-TOTAL ROW ---
+
+        addCleanTaxRow(itemTable, "CGST",
+                String.valueOf(inv.getOrDefault("cgst_amount", "0.00")), normalFont);
+        addCleanTaxRow(itemTable, "SGST",
+                String.valueOf(inv.getOrDefault("sgst_amount", "0.00")), normalFont);
+        addCleanTaxRow(itemTable, "Round Off",
+                String.valueOf(inv.getOrDefault("discount", "0.00")), normalFont);
+
+        // E. GRAND TOTAL ROW (With Borders again)
+
+        PdfPCell totalLabel = new PdfPCell(new Phrase("Total", boldFont));
+        totalLabel.setColspan(3);
+        totalLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        itemTable.addCell(totalLabel);
+
+        // Safely handle quantity_number
+        String qtyTotal = String.valueOf(inv.getOrDefault("quantity_number", "0"));
+        itemTable.addCell(createItemCell(qtyTotal + " Kg", boldFont,
+                Element.ALIGN_RIGHT));
+
+        itemTable.addCell(new PdfPCell(new Phrase(""))); // Rate
+        itemTable.addCell(new PdfPCell(new Phrase(""))); // Per
+
+        // Safely handle total_amount
+        String grandTotalVal = String.valueOf(inv.getOrDefault("total_amount",
+                "0.00"));
+        PdfPCell finalAmount = new PdfPCell(new Phrase("₹ " + grandTotalVal,
+                boldFont));
+        finalAmount.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        itemTable.addCell(finalAmount);
+        document.add(itemTable);
         // --- 4. Amount in Words (New Placement: AFTER items, BEFORE HSN) ---
         PdfPTable wordsTable = new PdfPTable(1);
         wordsTable.setWidthPercentage(100);
         PdfPCell wordsCell = new PdfPCell();
         wordsCell.setPadding(5);
         wordsCell.addElement(new Phrase("Amount Chargeable (in words):", smallFont));
-        wordsCell.addElement(new Phrase("Indian Rupees Seven Thousand Three Hundred Two Only", normalFont));
+        wordsCell.addElement(
+                new Phrase("Indian Rupees " +
+                        convertToWords(inv.get("total_amount").toString()) + " Only", boldFont));
         wordsTable.addCell(wordsCell);
         document.add(wordsTable);
 
-        // --- 5. HSN/SAC Tax Summary Table ---
-        // 1. Create the main 5-column table
         PdfPTable taxTable = new PdfPTable(5);
         taxTable.setWidthPercentage(100);
         taxTable.setSpacingBefore(10);
@@ -412,4 +502,96 @@ public class InvoicePdfService {
         return cell;
     }
 
+    private void addCleanTaxRow(PdfPTable table, String label, String value, Font font) {
+        // Spacer for first 5 columns to keep left side clean
+        PdfPCell leftSpacer = new PdfPCell(new Phrase(" "));
+        leftSpacer.setColspan(5);
+        leftSpacer.setBorder(Rectangle.LEFT);
+        table.addCell(leftSpacer);
+
+        // Column 6 (Disc %): The Tax Label
+        PdfPCell labelCell = new PdfPCell(new Phrase(label, font));
+        labelCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        labelCell.setBorder(Rectangle.NO_BORDER);
+        table.addCell(labelCell);
+
+        // Column 7 (Amount): The Tax Value
+        PdfPCell valueCell = new PdfPCell(new Phrase(value, font));
+        valueCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        valueCell.setBorder(Rectangle.RIGHT);
+        table.addCell(valueCell);
+    }
+
+    private void addCleanTaxRowForGrid(PdfPTable table, String label, String value, Font font) {
+        // Fill first 5 columns with empty cells
+        for (int i = 0; i < 5; i++) {
+            PdfPCell empty = new PdfPCell(new Phrase(" "));
+            // Maintain vertical borders only
+            empty.setBorder(Rectangle.LEFT | Rectangle.RIGHT);
+            table.addCell(empty);
+        }
+        // 6th Column: Label
+        PdfPCell lCell = new PdfPCell(new Phrase(label, font));
+        lCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        table.addCell(lCell);
+
+        // 7th Column: Value
+        PdfPCell vCell = new PdfPCell(new Phrase(value, font));
+        vCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        table.addCell(vCell);
+    }
+
+    // --- ADD THIS METHOD AT THE BOTTOM OF YOUR CLASS ---
+    public String convertToWords(String amountStr) {
+        try {
+            if (amountStr == null || amountStr.isEmpty())
+                return "Zero";
+
+            // Remove commas if any and convert to double
+            double amount = Double.parseDouble(amountStr.replace(",", ""));
+            long bytes = (long) amount;
+
+            if (bytes == 0)
+                return "Zero";
+
+            String[] units = { "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+                    "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen",
+                    "Nineteen" };
+            String[] tens = { "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" };
+
+            return convertPower(bytes, units, tens).trim();
+        } catch (Exception e) {
+            return "Error in conversion";
+        }
+    }
+
+    private String convertPower(long n, String[] units, String[] tens) {
+        if (n < 20)
+            return units[(int) n];
+        if (n < 100)
+            return tens[(int) (n / 10)] + " " + units[(int) (n % 10)];
+        if (n < 1000)
+            return units[(int) (n / 100)] + " Hundred " + convertPower(n % 100, units, tens);
+        if (n < 100000)
+            return convertPower(n / 1000, units, tens) + " Thousand " + convertPower(n % 1000, units, tens);
+        if (n < 10000000)
+            return convertPower(n / 100000, units, tens) + " Lakh " + convertPower(n % 100000, units, tens);
+        return convertPower(n / 10000000, units, tens) + " Crore " + convertPower(n % 10000000, units, tens);
+    }
+
+    private void addTaxRow(PdfPTable table, String label, double value, Font font) {
+        // Columns 1 to 5 are empty
+        for (int i = 0; i < 5; i++) {
+            table.addCell(new PdfPCell(new Phrase(" ")));
+        }
+        // Column 6 is the Label
+        PdfPCell cellLabel = new PdfPCell(new Phrase(label, font));
+        cellLabel.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        table.addCell(cellLabel);
+
+        // Column 7 is the Value
+        PdfPCell cellValue = new PdfPCell(new Phrase(String.format("%.2f", value), font));
+        cellValue.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        table.addCell(cellValue);
+    }
 }

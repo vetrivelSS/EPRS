@@ -18,6 +18,7 @@ import lombok.Data;
 public class DailyProductionUpdate {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    
     private Long id;
 
     private String productionId; // Now String type (e.g., PRD-12-2026)

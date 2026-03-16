@@ -132,6 +132,18 @@ public class Invoice {
 		this.status = status;
 	}
 
+	@Column(name = "download_count")
+	private Integer downloadCount = 0; // Initialize at 0
+	// Getter and Setter
+
+	public Integer getDownloadCount() {
+		return downloadCount;
+	}
+
+	public void setDownloadCount(Integer downloadCount) {
+		this.downloadCount = downloadCount;
+	}
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -153,7 +165,8 @@ public class Invoice {
 	// Address fields from Step 2
 	private String billToAddress;
 	private String shipToAddress;
-
+	@Column(name = "reference_no")
+	private Integer referenceNo;
 	// Multiple DC details-ah store panna
 	@Column(columnDefinition = "LONGTEXT")
 	private String dcDetailsJson;
