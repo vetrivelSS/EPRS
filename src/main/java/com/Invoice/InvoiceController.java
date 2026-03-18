@@ -32,75 +32,6 @@ public class InvoiceController {
     @Autowired
     private InvoicePdfService pdfService;
 
-    // @PostMapping("/create")
-    // @Transactional
-    // public ResponseEntity<Map<String, Object>> createInvoice(@RequestBody
-    // Map<String, Object> request) {
-    // Map<String, Object> response = new HashMap<>();
-    // try {
-    // String mainCustomerName = (String) request.get("customerName");
-
-    // // SAFE CONVERSION
-    // List<Map<String, Object>> dcList = objectMapper.convertValue(
-    // request.get("deliveryChallans"),
-    // new TypeReference<List<Map<String, Object>>>() {
-    // });
-
-    // for (Map<String, Object> dc : dcList) {
-    // String joNumber = (String) dc.get("jobOrderNumber");
-    // String dcCustomerName = (String) dc.get("customerName");
-    // if (!jobOrderRepository.existsByJobOrderNumber(joNumber)) {
-    // response.put("status", 400);
-    // response.put("message", "Error: Job Order Number " + joNumber + " not
-    // found!");
-    // return ResponseEntity.badRequest().body(response);
-    // }
-    // if (dcCustomerName == null ||
-    // !dcCustomerName.equalsIgnoreCase(mainCustomerName)) {
-    // response.put("status", 400);
-    // response.put("message", "Error: DC Number mismatch!");
-    // return ResponseEntity.badRequest().body(response);
-    // }
-    // }
-
-    // Invoice inv = new Invoice();
-    // inv.setInvoiceNumber("INV-" + (invoiceRepository.count() + 101));
-    // inv.setCustomerName(mainCustomerName);
-    // inv.setBillToAddress((String) request.get("billToAddress"));
-    // inv.setShipToAddress((String) request.get("shipToAddress"));
-
-    // Integer maxRef = invoiceRepository.findMaxReferenceNo();
-    // int nextRef = (maxRef == null) ? 1 : maxRef + 1;
-    // inv.setReferenceNo(nextRef);
-
-    // Double grandTotal = 0.0;
-    // for (Map<String, Object> dc : dcList) {
-    // Double qty = Double.parseDouble(dc.get("quantityKg").toString());
-    // Double rate = Double.parseDouble(dc.get("ratePer").toString());
-    // Double disc = Double.parseDouble(dc.get("discount").toString());
-    // Double individualTotal = (qty * rate) - disc;
-    // dc.put("totalAmount", individualTotal);
-    // grandTotal += individualTotal;
-    // }
-
-    // inv.setDcDetailsJson(objectMapper.writeValueAsString(dcList));
-    // inv.setTotalAmount(grandTotal);
-    // inv.setStatus("Active");
-
-    // Invoice savedInvoice = invoiceRepository.save(inv);
-
-    // response.put("status", 200);
-    // response.put("message", "Success: Validated & Invoice Created");
-    // response.put("data", savedInvoice);
-
-    // return ResponseEntity.ok(response);
-    // } catch (Exception e) {
-    // response.put("status", 500);
-    // response.put("message", "Error: " + e.getMessage());
-    // return ResponseEntity.status(500).body(response);
-    // }
-    // }
-
     @PostMapping("/create")
     @Transactional
     public ResponseEntity<Map<String, Object>> createInvoice(@RequestBody Map<String, Object> request) {
@@ -247,20 +178,31 @@ public class InvoiceController {
                 return ResponseEntity.status(404).build();
 
             headerData = new HashMap<>(result.get(0));
+            Object shipAddress = headerData.get("ship_to_address");
+            
+            // 2. Fallback to 'city' from the business partner table if address is empty
+            Object bpCity = headerData.get("city");
+
+            String finalCity = "";
+            if (shipAddress != null && !shipAddress.toString().trim().isEmpty()) {
+                finalCity = shipAddress.toString();
+            } else if (bpCity != null && !bpCity.toString().trim().isEmpty()) {
+                finalCity = bpCity.toString();
+            }
+
+            // 3. Put it into the key 'destination' so the PDF service can find it
+            headerData.put("destination", finalCity);
+
             if (invoiceOpt.isPresent()) {
                 headerData.put("ref_count", invoiceOpt.get().getReferenceNo());
                 headerData.put("invoice_number", invoiceOpt.get().getInvoiceNumber());
-            }
-
-            String finalCity = (headerData.get("city") != null && !headerData.get("city").toString().isEmpty())
-                    ? headerData.get("city").toString()
-                    : "Chennai";
-            headerData.put("destination", finalCity);
-
+            
+            } 
+            
             // VERSION-SAFE PARSING
             Object rawJson = headerData.get("dc_details_json");
             List<Map<String, Object>> itemsList = safeParseJson(rawJson != null ? rawJson.toString() : null);
-
+         // Ensure 'result.get(0)' or 'headerData' actually has the HSN from the SQL query
             byte[] pdfBytes = pdfService.generateInvoicePdf(headerData, itemsList);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
@@ -272,10 +214,7 @@ public class InvoiceController {
         }
     }
 
-    /**
-     * Helper method to parse JSON without triggering the Jackson 2.17.0
-     * getNumberTypeFP bug
-     */
+   
     private List<Map<String, Object>> safeParseJson(String json) {
         List<Map<String, Object>> list = new ArrayList<>();
         if (json == null || json.equals("null") || json.trim().isEmpty())

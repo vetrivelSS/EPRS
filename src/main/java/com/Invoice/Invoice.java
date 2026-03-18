@@ -167,10 +167,43 @@ public class Invoice {
 	private String shipToAddress;
 	@Column(name = "reference_no")
 	private Integer referenceNo;
+	
+	public Double getCgstAmount() {
+		return cgstAmount;
+	}
+
+	public void setCgstAmount(Double cgstAmount) {
+		this.cgstAmount = cgstAmount;
+	}
+
+	public Double getSgstAmount() {
+		return sgstAmount;
+	}
+
+	public void setSgstAmount(Double sgstAmount) {
+		this.sgstAmount = sgstAmount;
+	}
+
+	public Double getTaxableValue() {
+		return taxableValue;
+	}
+
+	public void setTaxableValue(Double taxableValue) {
+		this.taxableValue = taxableValue;
+	}
+
+	public Integer getReferenceNo() {
+		return referenceNo;
+	}
+
+	public void setReferenceNo(Integer referenceNo) {
+		this.referenceNo = referenceNo;
+	}
+
 	// Multiple DC details-ah store panna
 	@Column(columnDefinition = "LONGTEXT")
 	private String dcDetailsJson;
 
-	private Double totalAmount; // Final calculated amount
-	private String status; // Active/Pending
+	private Double totalAmount;
+	private String status; 
 }
